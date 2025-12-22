@@ -1,2 +1,3 @@
-/mvnw text eol=lf
-*.cmd text eol=crlf
+# Force all java files to use LF (Unix style) for consistency in Linux containers
+*.java text eol=lf
+*.xml text eol=lf
