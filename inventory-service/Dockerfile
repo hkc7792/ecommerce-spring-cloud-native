@@ -1,5 +1,5 @@
 # Stage 1: Build the application
-FROM maven:3.8.4-openjdk-17-slim AS build
+FROM maven:3.9-eclipse-temurin-21 AS build
 WORKDIR /app
 
 # Copy the parent pom from the root (needed for dependency versions)
@@ -12,7 +12,7 @@ COPY inventory-service/src ./inventory-service/src
 RUN mvn clean package -pl inventory-service -am -DskipTests
 
 # Stage 2: Run the application
-FROM openjdk:17-jdk-slim
+FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
 COPY --from=build /app/inventory-service/target/*.jar app.jar
 

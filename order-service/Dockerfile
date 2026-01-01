@@ -1,5 +1,5 @@
 # Stage 1: Build stage using Maven and Java 17
-FROM maven:3.8.4-openjdk-17-slim AS builder
+FROM maven:3.9-eclipse-temurin-21 AS build
 WORKDIR /build
 
 # 1. Copy the Parent POM from the root context
@@ -14,7 +14,7 @@ COPY order-service/src ./order-service/src
 RUN mvn clean package -pl order-service -am -DskipTests
 
 # Stage 2: Runtime stage using a lightweight JRE
-FROM openjdk:17-jdk-slim
+FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
 
 # Copy only the built JAR from the builder stage
