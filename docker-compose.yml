@@ -1,0 +1,50 @@
+services:
+  inventory-db:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
+      MYSQL_DATABASE: inventory_db
+    ports:
+      - "3306:3306"
+    networks:
+      - ecommerce-network
+
+  inventory-service:
+    build:
+      context: .
+      dockerfile: inventory-service/Dockerfile
+    environment:
+      - SPRING_DATASOURCE_URL=${INVENTORY_DB_URL}
+      - SPRING_DATASOURCE_USERNAME=${DB_USER}
+      - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD}
+    depends_on:
+      - inventory-db
+    networks:
+      - ecommerce-network
+
+  order-db:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
+      MYSQL_DATABASE: order_db
+    ports:
+      - "3307:3306"
+    networks:
+      - ecommerce-network
+
+  order-service:
+    build:
+      context: .
+      dockerfile: order-service/Dockerfile
+    environment:
+      - SPRING_DATASOURCE_URL=${ORDER_DB_URL}
+      - SPRING_DATASOURCE_USERNAME=${DB_USER}
+      - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD}
+    depends_on:
+      - order-db
+    networks:
+      - ecommerce-network
+
+networks:
+  ecommerce-network:
+    driver: bridge

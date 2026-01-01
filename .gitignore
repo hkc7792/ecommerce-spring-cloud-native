@@ -1,8 +1,7 @@
+HELP.md
+
 # Compiled class file
 *.class
-
-# Log file
-*.log
 
 # BlueJ files
 *.ctxt
@@ -22,3 +21,59 @@
 # virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
 hs_err_pid*
 replay_pid*
+
+
+# --- IDE Specifics ---
+.idea
+.idea/
+*.iml
+*.iws
+*.ipr
+out/
+.vscode/
+.settings/
+.project
+.classpath
+
+# --- Build & Output ---
+target/
+**/target/
+build/
+bin/
+
+
+# --- Logs & Temp ---
+*.log
+logs/
+temp/
+tmp/
+
+# --- OS Specifics ---
+.DS_Store
+Thumbs.db
+
+# --- Spring Boot & Cloud ---
+.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
+
+# --- Environment & Security ---
+.env
+*.jks
+*.p12
+
+### STS ###
+.apt_generated
+.factorypath
+.settings
+.springBeans
+.sts4-cache
+
+### NetBeans ###
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+!**/src/main/**/build/
+!**/src/test/**/build/
