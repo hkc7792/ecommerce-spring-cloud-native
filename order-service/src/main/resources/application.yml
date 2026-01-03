@@ -1,24 +1,17 @@
 server:
-  port: 8082
+  port: 8080
 
 spring:
   application:
     name: order-service
 
   datasource:
-    # Docker uses 'inventory-db', Local IDE uses 'localhost'
-#    url: ${SPRING_DATASOURCE_URL:jdbc:mysql://localhost:3306/order-db}
-#    username: ${SPRING_DATASOURCE_USERNAME:root}
-#    password: ${SPRING_DATASOURCE_PASSWORD:password}
-#    driver-class-name: com.mysql.cj.jdbc.Driver
-
-    #2 for H2
+    # Docker uses 'inventory-db', Local IDE uses 'h2 db'
     url: ${SPRING_DATASOURCE_URL:jdbc:h2:mem:testdb}
     username: ${SPRING_DATASOURCE_USERNAME:sa}
-    password: ${SPRING_DATASOURCE_PASSWORD:}
-    driver-class-name: org.h2.Driver
+    password: ${SPRING_DATASOURCE_PASSWORD:password}
+    driver-class-name: ${SPRING_DATASOURCE_DRIVER:org.h2.Driver}
 
-    # Enable H2 Console for local testing if needed
   h2:
     console:
       enabled: true
@@ -28,6 +21,5 @@ spring:
     hibernate:
       ddl-auto: update
     show-sql: true
-    #   database-platform: ${SPRING_JPA_DIALECT:org.hibernate.dialect.MySQL8Dialect}
     database-platform: ${SPRING_JPA_DIALECT:org.hibernate.dialect.H2Dialect}
 

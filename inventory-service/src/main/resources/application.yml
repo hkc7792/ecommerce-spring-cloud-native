@@ -1,5 +1,5 @@
 server:
-  port: 8081
+  port: 8080
 
 spring:
   application:
@@ -7,22 +7,19 @@ spring:
 
   datasource:
     # 1. For Mysql - Docker uses 'inventory-db', Local IDE uses 'localhost'
-#    url: ${SPRING_DATASOURCE_URL:jdbc:mysql://localhost:3306/inventory_db}
-#    username: ${SPRING_DATASOURCE_USERNAME:root}
-#    password: ${SPRING_DATASOURCE_PASSWORD:password}
-#    driver-class-name: com.mysql.cj.jdbc.Driver
-
-  #2 for H2
     url: ${SPRING_DATASOURCE_URL:jdbc:h2:mem:testdb}
     username: ${SPRING_DATASOURCE_USERNAME:sa}
-    password: ${SPRING_DATASOURCE_PASSWORD:}
-    driver-class-name: org.h2.Driver
+    password: ${SPRING_DATASOURCE_PASSWORD:password}
+    driver-class-name: ${SPRING_DATASOURCE_DRIVER:org.h2.Driver}
 
   # Enable H2 Console for local testing if needed
   h2:
     console:
       enabled: true
       path: /h2-console
+      settings:
+        # MANDATORY: Allows access from your browser to the Docker container
+        web-allow-others: true
 
   jpa:
     hibernate:

@@ -58,7 +58,7 @@ Thumbs.db
 !**/src/test/**/target/
 
 # --- Environment & Security ---
-.env
+*.env
 *.jks
 *.p12
 

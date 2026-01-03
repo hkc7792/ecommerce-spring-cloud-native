@@ -1,28 +1,32 @@
-# Stage 1: Build stage using Maven and Java 17
-FROM maven:3.9-eclipse-temurin-21 AS build
-WORKDIR /build
-
-# 1. Copy the Parent POM from the root context
-COPY pom.xml ./
-
-# 2. Copy the order-service module files
-COPY order-service/pom.xml ./order-service/
-COPY order-service/src ./order-service/src
-
-# 3. Build the order-service specifically
-# -pl: project list, -am: also make dependencies
-RUN mvn clean package -pl order-service -am -DskipTests
-
-# Stage 2: Runtime stage using a lightweight JRE
-FROM eclipse-temurin:21-jre-alpine
+# Stage 1: Build
+FROM maven:3.9-eclipse-temurin-21 AS builder
 WORKDIR /app
 
-# Copy only the built JAR from the builder stage
-# Note: Ensure 'order-service' matches the artifactId in your pom.xml
-COPY --from=builder /build/order-service/target/order-service-*.jar app.jar
+# 1. Copy the Parent POM
+COPY pom.xml .
 
-# Expose the port defined in your application.yml
-EXPOSE 8082
+# 2. REPEAT: Copy ALL module POMs
+# Even though we are building 'order-service',
+# Maven needs to 'see' all modules mentioned in the parent pom.xml
+COPY inventory-service/pom.xml ./inventory-service/
+COPY order-service/pom.xml ./order-service/
+# If you have a common-library, copy its pom too:
+# COPY common-library/pom.xml ./common-library/
 
-# Start the application
+# 3. Cache dependencies (optional but recommended)
+RUN mvn dependency:go-offline -B -pl order-service -am
+
+# 4. Copy ONLY the source code for order-service
+COPY order-service/src ./order-service/src
+# IMPORTANT: If order-service depends on a common-library,
+# you MUST copy the common-library/src too!
+
+# 5. Build the service
+RUN mvn clean package -pl order-service -am -DskipTests
+
+# Stage 2: Runtime
+FROM eclipse-temurin:21-jre-alpine
+WORKDIR /app
+COPY --from=builder /app/order-service/target/order-service-*.jar app.jar
+EXPOSE 8080
 ENTRYPOINT ["java", "-jar", "app.jar"]
