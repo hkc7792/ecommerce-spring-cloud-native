@@ -7,7 +7,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Entity
-@Table(name = "t_inventory")
+@Table(name = "inventory")
 @Getter
 @Setter
 @AllArgsConstructor
@@ -16,7 +16,9 @@ public class Inventory {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+    @Column(name= "sku_code")
     private String skuCode;
     private Integer quantity;
+    private String status;
 }
 

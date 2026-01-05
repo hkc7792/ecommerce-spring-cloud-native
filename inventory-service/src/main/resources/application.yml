@@ -4,6 +4,11 @@ server:
 spring:
   application:
     name: inventory-service
+  sql:
+    init:
+      mode: always
+      data-locations: classpath:data.sql
+      # schema-locations: classpath:schema.sql # Uncomment if needed
 
   datasource:
     # 1. For Mysql - Docker uses 'inventory-db', Local IDE uses 'localhost'
@@ -25,5 +30,7 @@ spring:
     hibernate:
       ddl-auto: update
     show-sql: true
-#   database-platform: ${SPRING_JPA_DIALECT:org.hibernate.dialect.MySQL8Dialect}
     database-platform: ${SPRING_JPA_DIALECT:org.hibernate.dialect.H2Dialect}
+    # Crucial: Ensures Hibernate creates tables BEFORE data.sql runs
+    defer-datasource-initialization: true
+

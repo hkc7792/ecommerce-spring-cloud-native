@@ -1,9 +1,9 @@
 package com.ecommerce.inventory.service.impl;
 
+import com.ecommerce.commons.responses.InventoryResponse;
 import com.ecommerce.inventory.repository.InventoryRepository;
-import com.ecommerce.inventory.responses.InventoryResponse;
 import com.ecommerce.inventory.service.InventoryService;
-import lombok.AllArgsConstructor;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -11,10 +11,10 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 @Component
-@AllArgsConstructor
+@RequiredArgsConstructor
 public class InventoryServiceImpl implements InventoryService {
 
-    private InventoryRepository inventoryRepository;
+    private final InventoryRepository inventoryRepository;
 
     @Transactional(readOnly = true)
     public List<InventoryResponse> isInStock(List<String> skuCode) {
@@ -26,5 +26,4 @@ public class InventoryServiceImpl implements InventoryService {
                                 .build()
                 ).collect(Collectors.toList());
     }
-
 }

@@ -1,6 +1,8 @@
 package com.ecommerce.inventory.service;
 
-import com.ecommerce.inventory.responses.InventoryResponse;
+
+
+import com.ecommerce.commons.responses.InventoryResponse;
 
 import java.util.List;
 
