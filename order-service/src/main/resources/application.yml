@@ -23,3 +23,7 @@ spring:
     show-sql: true
     database-platform: ${SPRING_JPA_DIALECT:org.hibernate.dialect.H2Dialect}
 
+inventory:
+  service:
+    url: ${INVENTORY_SERVICE_URL}
+

@@ -7,6 +7,7 @@ COPY pom.xml .
 
 # 2. FIX: Copy the POMs for ALL modules (even ones you aren't building)
 # This satisfies the Maven Reactor validation
+COPY commons/pom.xml ./commons/
 COPY inventory-service/pom.xml ./inventory-service/
 COPY order-service/pom.xml ./order-service/
 # Add any other modules (e.g., common-module) here if they exist
@@ -15,6 +16,7 @@ COPY order-service/pom.xml ./order-service/
 RUN mvn dependency:go-offline -B -pl inventory-service -am
 
 # 4. Copy ONLY the source code for the service you are building
+COPY commons/src ./commons/src
 COPY inventory-service/src ./inventory-service/src
 
 # 5. Build the specific service

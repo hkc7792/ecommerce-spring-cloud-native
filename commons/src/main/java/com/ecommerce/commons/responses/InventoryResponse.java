@@ -1,4 +1,4 @@
-package com.ecommerce.inventory.responses;
+package com.ecommerce.commons.responses;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;

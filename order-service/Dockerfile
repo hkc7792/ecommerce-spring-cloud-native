@@ -8,6 +8,7 @@ COPY pom.xml .
 # 2. REPEAT: Copy ALL module POMs
 # Even though we are building 'order-service',
 # Maven needs to 'see' all modules mentioned in the parent pom.xml
+COPY commons/pom.xml ./commons/
 COPY inventory-service/pom.xml ./inventory-service/
 COPY order-service/pom.xml ./order-service/
 # If you have a common-library, copy its pom too:
@@ -17,6 +18,7 @@ COPY order-service/pom.xml ./order-service/
 RUN mvn dependency:go-offline -B -pl order-service -am
 
 # 4. Copy ONLY the source code for order-service
+COPY commons/src ./commons/src
 COPY order-service/src ./order-service/src
 # IMPORTANT: If order-service depends on a common-library,
 # you MUST copy the common-library/src too!

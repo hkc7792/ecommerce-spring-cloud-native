@@ -1,12 +1,11 @@
 package com.ecommerce.inventory.cotroller;
 
-import com.ecommerce.inventory.responses.InventoryResponse;
+import com.ecommerce.commons.responses.InventoryResponse;
 import com.ecommerce.inventory.service.InventoryService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.Collections;
 import java.util.List;
 
 @RestController
@@ -14,13 +13,13 @@ import java.util.List;
 @RequiredArgsConstructor
 public class InventoryController {
 
-    private  InventoryService inventoryService;
+    private final InventoryService inventoryService;
 
     @GetMapping
     @ResponseStatus(HttpStatus.OK)
     public List<InventoryResponse> isInStock(@RequestParam("skuCode") List<String> skuCode) {
-       // return inventoryService.isInStock(skuCode);
-        return Collections.singletonList(InventoryResponse.builder().skuCode("skuCode").isInStock(true).build());
+       return inventoryService.isInStock(skuCode);
+        //return Collections.singletonList(InventoryResponse.builder().skuCode("skuCode").isInStock(true).build());
 
     }
 }
