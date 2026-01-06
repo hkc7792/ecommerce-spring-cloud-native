@@ -1,7 +1,7 @@
 package com.ecommerce.inventory.cotroller;
 
+import com.ecommerce.commons.requests.InventoryRequest;
 import com.ecommerce.commons.responses.InventoryResponse;
-import com.ecommerce.inventory.model.request.InventoryRequest;
 import com.ecommerce.inventory.service.InventoryService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -28,6 +28,11 @@ public class InventoryController {
     public void addInventory(@Valid @RequestBody InventoryRequest inventoryRequest) {
         inventoryService.addInventory(inventoryRequest);
     }
-}
 
+    @PostMapping("/reduce")
+    public void reduceStock(@RequestBody List<InventoryRequest> reduceRequests) {
+        inventoryService.reduceStock(reduceRequests);
+    }
+
+}
 

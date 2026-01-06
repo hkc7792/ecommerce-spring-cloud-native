@@ -1,6 +1,7 @@
 package com.ecommerce.order.service.impl;
 
 import com.ecommerce.commons.client.InventoryClient;
+import com.ecommerce.commons.requests.InventoryRequest;
 import com.ecommerce.commons.responses.InventoryResponse;
 import com.ecommerce.order.dto.OrderLineItemsDto;
 import com.ecommerce.order.dto.OrderRequest;
@@ -26,35 +27,48 @@ public class OrderServiceImpl implements OrderService {
     @Override
     public String placeOrder(OrderRequest orderRequest) {
 
-        // 1. Map Request to Entity
+        // 1. Validate the Request & Map to Entity
         Order order = mapToOrder(orderRequest);
-
-        // 2. Extract SKU codes for the inventory check
         List<String> skuCodes = order.getOrderLineItemsList().stream()
                 .map(OrderLineItems::getSkuCode)
                 .toList();
-        // 3. Call Inventory Service (Outside the Transaction)
+
+        // 2. REMOTE CHECK (Call inventory service OUTSIDE @Transactional)
+        // This avoids holding a DB connection while waiting for network I/O
         List<InventoryResponse> inventoryResponses = inventoryClient.isInStock(skuCodes);
 
-        // 4. Validate Stock
-        boolean allProductsInStock = inventoryResponses.stream()
-                .allMatch(InventoryResponse::isInStock);
-        boolean allItemsFound = inventoryResponses.size() == skuCodes.size();
+        // 3. ROBUST VALIDATION
+        validateStock(skuCodes, inventoryResponses);
+        // 4. ATOMIC EXECUTION (Place Order & Reduce Stock)
+        // We call a separate @Transactional method to ensure data integrity
+        return executeOrderTransaction(order, orderRequest);
 
-        if (allProductsInStock && allItemsFound) {
-            // 5. Call the transactional method for DB operations
-            saveOrder(order);
-            return "Order Placed Successfully";
-        }
+    }
 
-        // 4. Identify EXACT failures for better client feedback
-        List<String> missingOrEmptySkus = skuCodes.stream()
+    private String executeOrderTransaction(Order order, OrderRequest orderRequest) {
+        // 1. Save locally (Place the Order)
+        orderRepository.save(order);
+
+        // 2. Deduct remotely (Reduce Stock)
+        List<InventoryRequest> reduceRequests = orderRequest.getOrderLineItemsDtoList().stream()
+                .map(item -> new InventoryRequest(item.getSkuCode(), item.getQuantity()))
+                .toList();
+
+        // If this fails, @Transactional will ROLLBACK the orderRepository.save(order)
+        inventoryClient.reduceStock(reduceRequests);
+
+        return "Order Placed Successfully";
+    }
+
+    private void validateStock(List<String> skuCodes, List<InventoryResponse> inventoryResponses) {
+        List<String> unavailable = skuCodes.stream()
                 .filter(sku -> inventoryResponses.stream()
                         .noneMatch(res -> res.getSkuCode().equals(sku) && res.isInStock()))
                 .toList();
 
-        throw new OutOfStockException("The following items are unavailable: " + missingOrEmptySkus);
-
+        if (!unavailable.isEmpty()) {
+            throw new OutOfStockException("Items unavailable: " + unavailable);
+        }
     }
 
     @Transactional

@@ -1,8 +1,8 @@
 package com.ecommerce.inventory.service.impl;
 
+import com.ecommerce.commons.requests.InventoryRequest;
 import com.ecommerce.commons.responses.InventoryResponse;
 import com.ecommerce.inventory.entites.Inventory;
-import com.ecommerce.inventory.model.request.InventoryRequest;
 import com.ecommerce.inventory.repository.InventoryRepository;
 import com.ecommerce.inventory.service.InventoryService;
 import lombok.RequiredArgsConstructor;
@@ -46,5 +46,22 @@ public class InventoryServiceImpl implements InventoryService {
                             inventoryRepository.save(newInventory);
                         }
                 );
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void reduceStock(List<InventoryRequest> reduceRequests) {
+        for (InventoryRequest request : reduceRequests) {
+            Inventory inventory = inventoryRepository.findBySkuCode(request.getSkuCode())
+                    .orElseThrow(() -> new RuntimeException("Item not found: " + request.getSkuCode()));
+
+            if (inventory.getQuantity() < request.getQuantity()) {
+                throw new RuntimeException("Insufficient stock for: " + request.getSkuCode());
+            }
+
+            inventory.setQuantity(inventory.getQuantity() - request.getQuantity());
+            inventory.setStatus(inventory.getQuantity() > 0 ? "IN_STOCK" : "OUT_OF_STOCK");
+            inventoryRepository.save(inventory);
+        }
     }
 }
