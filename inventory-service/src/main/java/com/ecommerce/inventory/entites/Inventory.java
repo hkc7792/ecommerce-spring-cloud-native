@@ -1,10 +1,7 @@
 package com.ecommerce.inventory.entites;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 
 @Entity
 @Table(name = "inventory")
@@ -12,13 +9,16 @@ import lombok.Setter;
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
+@Builder
 public class Inventory {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    @Column(name= "sku_code")
+
+    @Column(name = "sku_code", unique = true, nullable = false)
     private String skuCode;
-    private Integer quantity;
-    private String status;
+
+    private Integer quantity=0;
+    private String status = "OUT_OF_STOCK";
 }
 

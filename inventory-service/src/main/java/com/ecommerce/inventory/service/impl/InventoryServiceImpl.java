@@ -1,6 +1,8 @@
 package com.ecommerce.inventory.service.impl;
 
 import com.ecommerce.commons.responses.InventoryResponse;
+import com.ecommerce.inventory.entites.Inventory;
+import com.ecommerce.inventory.model.request.InventoryRequest;
 import com.ecommerce.inventory.repository.InventoryRepository;
 import com.ecommerce.inventory.service.InventoryService;
 import lombok.RequiredArgsConstructor;
@@ -16,6 +18,7 @@ public class InventoryServiceImpl implements InventoryService {
 
     private final InventoryRepository inventoryRepository;
 
+    @Override
     @Transactional(readOnly = true)
     public List<InventoryResponse> isInStock(List<String> skuCode) {
         return inventoryRepository.findBySkuCodeIn(skuCode).stream()
@@ -25,5 +28,23 @@ public class InventoryServiceImpl implements InventoryService {
                                 .isInStock(inventory.getQuantity() > 0)
                                 .build()
                 ).collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class) // Ensures rollback for ALL exceptions
+    public void addInventory(InventoryRequest inventoryRequest) {
+        inventoryRepository.findBySkuCode(inventoryRequest.getSkuCode())
+                .ifPresentOrElse(
+                        existingInventory -> {
+                            // UPDATE existing item count
+                            existingInventory.setQuantity(existingInventory.getQuantity() + inventoryRequest.getQuantity());
+                            inventoryRepository.save(existingInventory);
+                        },
+                        () -> {
+                            // ADD new item to stock
+                            Inventory newInventory = Inventory.builder().skuCode(inventoryRequest.getSkuCode()).quantity(inventoryRequest.getQuantity()).status("IN_STOCK").build();
+                            inventoryRepository.save(newInventory);
+                        }
+                );
     }
 }

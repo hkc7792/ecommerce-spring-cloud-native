@@ -38,8 +38,10 @@ services:
       - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD}
       - SPRING_DATASOURCE_DRIVER=${MYSQL_DRIVER}
       - SPRING_JPA_DIALECT=${MYSQL_DIALECT}
+      - JAVA_TOOL_OPTIONS=-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5000
     ports:
       - "8081:8080"
+      - "5001:5000"
     depends_on:
       inventory-db:
         condition: service_healthy
@@ -89,8 +91,10 @@ services:
       - SPRING_DATASOURCE_DRIVER=${MYSQL_DRIVER}
       - SPRING_JPA_DIALECT=${MYSQL_DIALECT}
       - INVENTORY_SERVICE_URL=http://inventory-service:8080
+      - JAVA_TOOL_OPTIONS=-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5000
     ports:
-      - "8082:8080"
+      - "8082:8080"   # application port 8080 in container
+      - "5002:5000"
     depends_on:
       order-db:
         condition: service_healthy
