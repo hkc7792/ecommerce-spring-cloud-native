@@ -1,4 +1,33 @@
 services:
+  zookeeper:
+    image: confluentinc/cp-zookeeper:latest
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+  kafka:
+    image: confluentinc/cp-kafka:latest
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      # High-level: This tells Kafka how to be reached from both inside and outside Docker
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    # Web UI for Kafka - accessible at http://localhost:9000
+    # Web UI for Kafka - accessible at http://localhost:9000
+  kafdrop:
+    image: obsidiandynamics/kafdrop
+    ports:
+      - "9000:9000"
+    environment:
+      KAFKA_BROKERCONNECT: "kafka:9092"
+    depends_on:
+      - kafka
+  # inventory-db config
   inventory-db:
     image: mysql:${DB_TAG:-latest}
     container_name: inventory_db_container
@@ -14,17 +43,10 @@ services:
       MYSQL_PASSWORD: ${DB_PASSWORD}
     ports:
       - "3307:3306"
+    volumes:
+      - inventory-data:/var/lib/mysql
     networks:
       - ecommerce-network
-#  inventory-db:
-#    image: oscarfonts/h2:latest  # A popular lightweight H2 server image
-#    environment:
-#     - H2_OPTIONS=-ifNotExists
-#    ports:
-#      - "1521:1521"  # H2 TCP Port
-#      - "8082:8082"  # H2 Web Console Port
-#    networks:
-#      - ecommerce-network
 
   inventory-service:
     image: ${DOCKER_USERNAME}/inventory-service:${IMAGE_TAG:-latest}
@@ -64,19 +86,9 @@ services:
     ports:
       - "3308:3306"
     volumes:
-      - mysql-data:/var/lib/mysql
+      - order-data:/var/lib/mysql
     networks:
       - ecommerce-network
-
-#  order-db:
-#    image: oscarfonts/h2:latest  # A popular lightweight H2 server image
-#    environment:
-#      - H2_OPTIONS=-ifNotExists
-#    ports:
-#      - "3307:3306"
-#    networks:
-#      - ecommerce-network
-
 
   order-service:
     image: ${DOCKER_USERNAME}/order-service:${IMAGE_TAG:-latest}
@@ -98,8 +110,6 @@ services:
     depends_on:
       order-db:
         condition: service_healthy
-    volumes:
-      - mysql-data:/var/lib/mysql
     networks:
       - ecommerce-network
 
@@ -108,4 +118,5 @@ networks:
     driver: bridge
 
 volumes:
-  mysql-data:
+  order-data:
+  inventory-data:

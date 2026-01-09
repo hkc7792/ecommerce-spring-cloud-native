@@ -3,28 +3,33 @@ package com.ecommerce.order.service.impl;
 import com.ecommerce.commons.client.InventoryClient;
 import com.ecommerce.commons.requests.InventoryRequest;
 import com.ecommerce.commons.responses.InventoryResponse;
-import com.ecommerce.order.dto.OrderLineItemsDto;
+import com.ecommerce.order.dto.OrderItemDto;
 import com.ecommerce.order.dto.OrderRequest;
 import com.ecommerce.order.entities.Order;
 import com.ecommerce.order.entities.OrderLineItems;
+import com.ecommerce.order.events.OrderPlaceEvent;
 import com.ecommerce.order.exceptions.OutOfStockException;
 import com.ecommerce.order.repository.OrderRepository;
 import com.ecommerce.order.service.OrderService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.UUID;
+import org.springframework.kafka.core.KafkaTemplate;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class OrderServiceImpl implements OrderService {
 
     private final OrderRepository orderRepository;
     private final InventoryClient inventoryClient;
+    private final KafkaTemplate<String, OrderPlaceEvent> kafkaTemplate;
 
-    @Override
+   /* @Override
     public String placeOrder(OrderRequest orderRequest) {
 
         // 1. Validate the Request & Map to Entity
@@ -42,6 +47,22 @@ public class OrderServiceImpl implements OrderService {
         // 4. ATOMIC EXECUTION (Place Order & Reduce Stock)
         // We call a separate @Transactional method to ensure data integrity
         return executeOrderTransaction(order, orderRequest);
+
+    }*/
+
+    @Override
+    public void placeOrder(OrderRequest orderRequest) {
+       //1. save Order in db
+        Order order = mapToOrder(orderRequest);
+        orderRepository.save(order);
+
+        //2. publish order place event to kafka
+            //2.1 event creation
+        OrderPlaceEvent event = new OrderPlaceEvent(order.getOrderNumber(),order.getOrderLineItemsList());
+            // 2.2 Send to Kafka topic "notificationTopic" (Asynchronous)
+        kafkaTemplate.send("notificationTopic", event);
+
+        log.info("Order Placed Successfully, Event sent to Kafka");
 
     }
 
@@ -86,7 +107,7 @@ public class OrderServiceImpl implements OrderService {
         order.setOrderLineItemsList(orderLineItems);
         return order;
     }
-    private OrderLineItems mapToDto(OrderLineItemsDto orderLineItemsDto) {
+    private OrderLineItems mapToDto(OrderItemDto orderLineItemsDto) {
         OrderLineItems orderLineItems = new OrderLineItems();
         orderLineItems.setPrice(orderLineItemsDto.getPrice());
         orderLineItems.setQuantity(orderLineItemsDto.getQuantity());
