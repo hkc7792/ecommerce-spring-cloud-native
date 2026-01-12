@@ -14,8 +14,9 @@ services:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
       # High-level: This tells Kafka how to be reached from both inside and outside Docker
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: LISTENER_DOCKER://kafka:29092,LISTENER_HOST://localhost:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: LISTENER_DOCKER:PLAINTEXT, LISTENER_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: LISTENER_DOCKER
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
     # Web UI for Kafka - accessible at http://localhost:9000
     # Web UI for Kafka - accessible at http://localhost:9000

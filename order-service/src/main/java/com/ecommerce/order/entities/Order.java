@@ -1,25 +1,34 @@
 package com.ecommerce.order.entities;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 @Entity
-@Table(name = "order")
-@Getter
-@Setter
+@Table(name = "orders")
+@Data
 @AllArgsConstructor
 @NoArgsConstructor
+@Builder
 public class Order {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @Column(unique = true, nullable = false)
     private String orderNumber;
-    @OneToMany(cascade = CascadeType.ALL)
-    @JoinColumn(name = "order_id") // Creates a foreign key in t_order_line_items
+
+    @Column(nullable = false)
+    private Long customerId;
+
+    @Column(nullable = false)
+    private BigDecimal totalAmount;
+
+    @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
+    @JoinColumn(name = "order_id") // Creates a foreign key in order_line_items
     private List<OrderLineItems> orderLineItemsList;
+
+
 }

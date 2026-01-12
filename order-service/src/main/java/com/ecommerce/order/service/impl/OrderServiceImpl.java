@@ -1,24 +1,25 @@
 package com.ecommerce.order.service.impl;
 
 import com.ecommerce.commons.client.InventoryClient;
-import com.ecommerce.commons.requests.InventoryRequest;
-import com.ecommerce.commons.responses.InventoryResponse;
 import com.ecommerce.order.dto.OrderItemDto;
 import com.ecommerce.order.dto.OrderRequest;
 import com.ecommerce.order.entities.Order;
 import com.ecommerce.order.entities.OrderLineItems;
 import com.ecommerce.order.events.OrderPlaceEvent;
-import com.ecommerce.order.exceptions.OutOfStockException;
 import com.ecommerce.order.repository.OrderRepository;
 import com.ecommerce.order.service.OrderService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.retry.annotation.Backoff;
+import org.springframework.retry.annotation.Recover;
+import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
-import org.springframework.kafka.core.KafkaTemplate;
 
 @Service
 @RequiredArgsConstructor
@@ -28,79 +29,56 @@ public class OrderServiceImpl implements OrderService {
     private final OrderRepository orderRepository;
     private final InventoryClient inventoryClient;
     private final KafkaTemplate<String, OrderPlaceEvent> kafkaTemplate;
+    private OutboxService outboxService;
 
-   /* @Override
-    public String placeOrder(OrderRequest orderRequest) {
-
-        // 1. Validate the Request & Map to Entity
-        Order order = mapToOrder(orderRequest);
-        List<String> skuCodes = order.getOrderLineItemsList().stream()
-                .map(OrderLineItems::getSkuCode)
-                .toList();
-
-        // 2. REMOTE CHECK (Call inventory service OUTSIDE @Transactional)
-        // This avoids holding a DB connection while waiting for network I/O
-        List<InventoryResponse> inventoryResponses = inventoryClient.isInStock(skuCodes);
-
-        // 3. ROBUST VALIDATION
-        validateStock(skuCodes, inventoryResponses);
-        // 4. ATOMIC EXECUTION (Place Order & Reduce Stock)
-        // We call a separate @Transactional method to ensure data integrity
-        return executeOrderTransaction(order, orderRequest);
-
-    }*/
 
     @Override
+    @Transactional
+    @Retryable(
+            value = { Exception.class },
+            maxAttempts = 3,
+            backoff = @Backoff(delay = 2000)
+    )
     public void placeOrder(OrderRequest orderRequest) {
-       //1. save Order in db
+       //1. Map and persist order
         Order order = mapToOrder(orderRequest);
         orderRepository.save(order);
 
-        //2. publish order place event to kafka
-            //2.1 event creation
-        OrderPlaceEvent event = new OrderPlaceEvent(order.getOrderNumber(),order.getOrderLineItemsList());
-            // 2.2 Send to Kafka topic "notificationTopic" (Asynchronous)
-        kafkaTemplate.send("notificationTopic", event);
+        //2. event creation
+        OrderPlaceEvent event = new OrderPlaceEvent(order.getOrderNumber(),order.getCustomerId(),order.getTotalAmount(),
+                Instant.now(),order.getOrderLineItemsList());
 
-        log.info("Order Placed Successfully, Event sent to Kafka");
-
-    }
-
-    private String executeOrderTransaction(Order order, OrderRequest orderRequest) {
-        // 1. Save locally (Place the Order)
-        orderRepository.save(order);
-
-        // 2. Deduct remotely (Reduce Stock)
-        List<InventoryRequest> reduceRequests = orderRequest.getOrderLineItemsDtoList().stream()
-                .map(item -> new InventoryRequest(item.getSkuCode(), item.getQuantity()))
-                .toList();
-
-        // If this fails, @Transactional will ROLLBACK the orderRepository.save(order)
-        inventoryClient.reduceStock(reduceRequests);
-
-        return "Order Placed Successfully";
-    }
-
-    private void validateStock(List<String> skuCodes, List<InventoryResponse> inventoryResponses) {
-        List<String> unavailable = skuCodes.stream()
-                .filter(sku -> inventoryResponses.stream()
-                        .noneMatch(res -> res.getSkuCode().equals(sku) && res.isInStock()))
-                .toList();
-
-        if (!unavailable.isEmpty()) {
-            throw new OutOfStockException("Items unavailable: " + unavailable);
+        // 3. Call the retryable method
+        try {
+            this.publishOrderEvent(event, orderRequest, order.getOrderNumber());
+        } catch (Exception e) {
+            log.error("Failed to publish event for order: {}", order.getOrderNumber());
         }
     }
 
-    @Transactional
-    public void saveOrder(Order order) {
-        orderRepository.save(order);
+    @Retryable(
+            retryFor = Exception.class,
+            maxAttempts = 3,
+            backoff = @Backoff(delay = 2000, multiplier = 2)
+    )
+    public void publishOrderEvent(OrderPlaceEvent event, OrderRequest request, String orderNumber) {
+        log.info("Attempting to send event to Kafka for order: {}", orderNumber);
+        kafkaTemplate.send("notificationTopic", event);
     }
+
+    @Recover
+    public void recoverOrderPlacement(Exception e, OrderPlaceEvent event, OrderRequest orderRequest, String orderNumber) {
+        log.error("All retries exhausted for Kafka. Saving event {} , to Outbox table as backup.",event);
+
+        // Save to your Out_Box table here so the event isn't lost
+        outboxService.saveFailedEvent(orderRequest, orderNumber);
+    }
+
 
     private Order mapToOrder(OrderRequest orderRequest) {
         Order order = new Order();
         order.setOrderNumber(UUID.randomUUID().toString());
-        List<OrderLineItems> orderLineItems = orderRequest.getOrderLineItemsDtoList()
+        List<OrderLineItems> orderLineItems = orderRequest.orderLineItemsDtoList()
                 .stream()
                 .map(this::mapToDto)
                 .toList();
@@ -109,9 +87,9 @@ public class OrderServiceImpl implements OrderService {
     }
     private OrderLineItems mapToDto(OrderItemDto orderLineItemsDto) {
         OrderLineItems orderLineItems = new OrderLineItems();
-        orderLineItems.setPrice(orderLineItemsDto.getPrice());
-        orderLineItems.setQuantity(orderLineItemsDto.getQuantity());
-        orderLineItems.setSkuCode(orderLineItemsDto.getSkuCode());
+        orderLineItems.setPrice(orderLineItemsDto.price());
+        orderLineItems.setQuantity(orderLineItemsDto.quantity());
+        orderLineItems.setSkuCode(orderLineItemsDto.skuCode());
         return orderLineItems;
     }
 

@@ -1,6 +1,6 @@
 package com.ecommerce.order.events;
 
-import com.ecommerce.order.dto.OrderItemDto;
+import com.ecommerce.order.entities.OrderLineItems;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -11,5 +11,5 @@ public record OrderPlaceEvent(
         Long customerId,         // Who placed it
         BigDecimal totalAmount,  // Total cost
         Instant orderTime,       // When it happened (ISO-8601 format)
-        List<OrderItemDto> items // What was bought
+        List<OrderLineItems> items // What was bought
 ){}
