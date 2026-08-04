@@ -26,6 +26,7 @@
         <maven.compiler.target>21</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <common-library.version>0.0.1-SNAPSHOT</common-library.version>
+        <springdoc.version>2.8.4</springdoc.version>
     </properties>
 
 
@@ -95,11 +96,17 @@
                 <version>3.14.0</version> <!-- latest stable -->
             </dependency>
 
-            <!-- Apache Commons Collections (Collection utilities, iterators, etc.) -->
             <dependency>
                 <groupId>org.apache.commons</groupId>
                 <artifactId>commons-collections4</artifactId>
                 <version>4.4</version> <!-- latest stable -->
+            </dependency>
+            
+            <!-- OpenAPI/Swagger -->
+            <dependency>
+                <groupId>org.springdoc</groupId>
+                <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+                <version>${springdoc.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
