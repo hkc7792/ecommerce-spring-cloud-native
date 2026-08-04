@@ -7,6 +7,7 @@ COPY commons/pom.xml ./commons/
 COPY inventory-service/pom.xml ./inventory-service/
 COPY order-service/pom.xml ./order-service/
 COPY payment-service/pom.xml ./payment-service/
+COPY user-service/pom.xml ./user-service/
 
 RUN mvn dependency:go-offline -B -pl payment-service -am
 
@@ -21,3 +22,4 @@ WORKDIR /app
 COPY --from=builder /app/payment-service/target/payment-service-*.jar app.jar
 EXPOSE 8080
 ENTRYPOINT ["java", "-jar", "app.jar"]
+

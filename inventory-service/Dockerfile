@@ -4,15 +4,12 @@ WORKDIR /app
 
 # 1. Copy the Root POM
 COPY pom.xml .
-
-# 2. FIX: Copy the POMs for ALL modules (even ones you aren't building)
-# This satisfies the Maven Reactor validation
 COPY commons/pom.xml ./commons/
 COPY inventory-service/pom.xml ./inventory-service/
 COPY order-service/pom.xml ./order-service/
-# Add any other modules (e.g., common-module) here if they exist
+COPY payment-service/pom.xml ./payment-service/
+COPY user-service/pom.xml ./user-service/
 
-# 3. Cache dependencies (Optional but highly recommended for speed)
 RUN mvn dependency:go-offline -B -pl inventory-service -am
 
 # 4. Copy ONLY the source code for the service you are building

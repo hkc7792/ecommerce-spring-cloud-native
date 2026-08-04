@@ -4,17 +4,12 @@ WORKDIR /app
 
 # 1. Copy the Parent POM
 COPY pom.xml .
-
-# 2. REPEAT: Copy ALL module POMs
-# Even though we are building 'order-service',
-# Maven needs to 'see' all modules mentioned in the parent pom.xml
 COPY commons/pom.xml ./commons/
 COPY inventory-service/pom.xml ./inventory-service/
 COPY order-service/pom.xml ./order-service/
-# If you have a common-library, copy its pom too:
-# COPY common-library/pom.xml ./common-library/
+COPY payment-service/pom.xml ./payment-service/
+COPY user-service/pom.xml ./user-service/
 
-# 3. Cache dependencies (optional but recommended)
 RUN mvn dependency:go-offline -B -pl order-service -am
 
 # 4. Copy ONLY the source code for order-service
