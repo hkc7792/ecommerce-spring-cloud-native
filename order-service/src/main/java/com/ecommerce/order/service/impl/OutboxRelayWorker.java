@@ -29,11 +29,14 @@ public class OutboxRelayWorker {
 
         for (OutBoxEvent event : pendingEvents) {
             try {
-                // 2. Attempt to send to Kafka
+                // 2. SET TO PROCESSING IMMEDIATELY
+                event.setStatus(OutBoxEvent.OutboxStatus.PROCESSING);
+                outboxRepository.saveAndFlush(event);
+                // 3. Attempt to send to Kafka
                 kafkaTemplate.send("notificationTopic", event.getAggregateId(), event.getPayload())
                         .get(5, TimeUnit.SECONDS); // Block briefly to ensure success
 
-                // 3. If successful, update status to PUBLISH
+                // 4. If successful, update status to PUBLISH
                 event.setStatus(OutBoxEvent.OutboxStatus.PUBLISH);
 
             } catch (Exception ex) {
@@ -44,7 +47,10 @@ public class OutboxRelayWorker {
                 if (event.getRetryCount() >= 5) {
                     event.setStatus(OutBoxEvent.OutboxStatus.FAILED);
                     log.error("Event {} reached max retries and is now FAILED", event.getId());
+                }else{
+                    event.setStatus(OutBoxEvent.OutboxStatus.PENDING);
                 }
+
             }
             outboxRepository.save(event);
         }
