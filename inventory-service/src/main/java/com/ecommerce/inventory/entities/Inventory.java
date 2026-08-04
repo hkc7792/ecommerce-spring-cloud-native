@@ -1,4 +1,4 @@
-package com.ecommerce.inventory.entites;
+package com.ecommerce.inventory.entities;
 
 import jakarta.persistence.*;
 import lombok.*;
@@ -21,4 +21,3 @@ public class Inventory {
     private Integer quantity=0;
     private String status = "OUT_OF_STOCK";
 }
-

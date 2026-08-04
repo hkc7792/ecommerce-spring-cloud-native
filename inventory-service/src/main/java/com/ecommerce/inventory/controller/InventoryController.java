@@ -1,4 +1,4 @@
-package com.ecommerce.inventory.cotroller;
+package com.ecommerce.inventory.controller;
 
 import com.ecommerce.commons.requests.InventoryRequest;
 import com.ecommerce.commons.responses.InventoryResponse;
@@ -30,9 +30,9 @@ public class InventoryController {
     }
 
     @PostMapping("/reduce")
+    @ResponseStatus(HttpStatus.OK)
     public void reduceStock(@RequestBody List<InventoryRequest> reduceRequests) {
         inventoryService.reduceStock(reduceRequests);
     }
 
 }
-

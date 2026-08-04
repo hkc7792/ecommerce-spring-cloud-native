@@ -1,6 +1,6 @@
 package com.ecommerce.inventory.repository;
 
-import com.ecommerce.inventory.entites.Inventory;
+import com.ecommerce.inventory.entities.Inventory;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;

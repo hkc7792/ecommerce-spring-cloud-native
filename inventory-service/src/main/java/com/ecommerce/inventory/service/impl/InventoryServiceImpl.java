@@ -2,7 +2,7 @@ package com.ecommerce.inventory.service.impl;
 
 import com.ecommerce.commons.requests.InventoryRequest;
 import com.ecommerce.commons.responses.InventoryResponse;
-import com.ecommerce.inventory.entites.Inventory;
+import com.ecommerce.inventory.entities.Inventory;
 import com.ecommerce.inventory.repository.InventoryRepository;
 import com.ecommerce.inventory.service.InventoryService;
 import lombok.RequiredArgsConstructor;
