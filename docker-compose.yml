@@ -4,6 +4,9 @@ services:
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
+    networks:
+      - ecommerce-network
+
   kafka:
     image: confluentinc/cp-kafka:latest
     depends_on:
@@ -13,21 +16,24 @@ services:
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      # High-level: This tells Kafka how to be reached from both inside and outside Docker
       KAFKA_ADVERTISED_LISTENERS: LISTENER_DOCKER://kafka:29092,LISTENER_HOST://localhost:9092
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: LISTENER_DOCKER:PLAINTEXT, LISTENER_HOST:PLAINTEXT
       KAFKA_INTER_BROKER_LISTENER_NAME: LISTENER_DOCKER
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-    # Web UI for Kafka - accessible at http://localhost:9000
-    # Web UI for Kafka - accessible at http://localhost:9000
+    networks:
+      - ecommerce-network
+
   kafdrop:
     image: obsidiandynamics/kafdrop
     ports:
       - "9000:9000"
     environment:
-      KAFKA_BROKERCONNECT: "kafka:9092"
+      KAFKA_BROKERCONNECT: "kafka:29092"
     depends_on:
       - kafka
+    networks:
+      - ecommerce-network
+
   # inventory-db config
   inventory-db:
     image: mysql:${DB_TAG:-latest}
@@ -104,12 +110,103 @@ services:
       - SPRING_DATASOURCE_DRIVER=${MYSQL_DRIVER}
       - SPRING_JPA_DIALECT=${MYSQL_DIALECT}
       - INVENTORY_SERVICE_URL=http://inventory-service:8080
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:29092
       - JAVA_TOOL_OPTIONS=-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5000
     ports:
-      - "8082:8080"   # application port 8080 in container
+      - "8082:8080"
       - "5002:5000"
     depends_on:
       order-db:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+    networks:
+      - ecommerce-network
+
+  payment-db:
+    image: mysql:${DB_TAG:-latest}
+    container_name: payment_db_container
+    healthcheck:
+      test: [ "CMD", "mysqladmin", "ping", "-h", "localhost", "-u${DB_USER}", "-p${DB_PASSWORD}" ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    environment:
+      MYSQL_ROOT_PASSWORD: ${ROOT_PASSWORD}
+      MYSQL_DATABASE: payment_db
+      MYSQL_USER: ${DB_USER}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+    ports:
+      - "3309:3306"
+    volumes:
+      - payment-data:/var/lib/mysql
+    networks:
+      - ecommerce-network
+
+  payment-service:
+    image: ${DOCKER_USERNAME}/payment-service:${IMAGE_TAG:-latest}
+    container_name: payment-service_${IMAGE_TAG:-latest}
+    build:
+      context: .
+      dockerfile: payment-service/Dockerfile
+    environment:
+      - SPRING_DATASOURCE_URL=${PAYMENT_DB_URL}
+      - SPRING_DATASOURCE_USERNAME=${DB_USER}
+      - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD}
+      - SPRING_DATASOURCE_DRIVER=${MYSQL_DRIVER}
+      - SPRING_JPA_DIALECT=${MYSQL_DIALECT}
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:29092
+      - JAVA_TOOL_OPTIONS=-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5000
+    ports:
+      - "8083:8080"
+      - "5003:5000"
+    depends_on:
+      payment-db:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+    networks:
+      - ecommerce-network
+
+  user-db:
+    image: mysql:${DB_TAG:-latest}
+    container_name: user_db_container
+    healthcheck:
+      test: [ "CMD", "mysqladmin", "ping", "-h", "localhost", "-u${DB_USER}", "-p${DB_PASSWORD}" ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    environment:
+      MYSQL_ROOT_PASSWORD: ${ROOT_PASSWORD}
+      MYSQL_DATABASE: user_db
+      MYSQL_USER: ${DB_USER}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+    ports:
+      - "3310:3306"
+    volumes:
+      - user-data:/var/lib/mysql
+    networks:
+      - ecommerce-network
+
+  user-service:
+    image: ${DOCKER_USERNAME}/user-service:${IMAGE_TAG:-latest}
+    container_name: user-service_${IMAGE_TAG:-latest}
+    build:
+      context: .
+      dockerfile: user-service/Dockerfile
+    environment:
+      - SPRING_DATASOURCE_URL=${USER_DB_URL}
+      - SPRING_DATASOURCE_USERNAME=${DB_USER}
+      - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD}
+      - SPRING_DATASOURCE_DRIVER=${MYSQL_DRIVER}
+      - SPRING_JPA_DIALECT=${MYSQL_DIALECT}
+      - JWT_SECRET=${JWT_SECRET}
+      - JAVA_TOOL_OPTIONS=-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5000
+    ports:
+      - "8084:8080"
+      - "5004:5000"
+    depends_on:
+      user-db:
         condition: service_healthy
     networks:
       - ecommerce-network
@@ -121,3 +218,5 @@ networks:
 volumes:
   order-data:
   inventory-data:
+  payment-data:
+  user-data:

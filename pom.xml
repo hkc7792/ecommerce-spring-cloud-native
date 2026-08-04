@@ -11,6 +11,8 @@
         <module>commons</module>
         <module>inventory-service</module>
         <module>order-service</module>
+        <module>payment-service</module>
+        <module>user-service</module>
     </modules>
 
     <properties>
