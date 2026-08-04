@@ -1,0 +1,1231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HLD Flow Diagram — E-Commerce Spring Cloud Native</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0f1117;
+            --bg-secondary: #1a1d2e;
+            --bg-card: #1e2235;
+            --bg-card-hover: #252a40;
+            --border: #2d3250;
+            --text-primary: #e8eaf0;
+            --text-secondary: #9ba1b7;
+            --text-muted: #6b7194;
+            --accent-blue: #5b8af5;
+            --accent-purple: #a78bfa;
+            --accent-green: #34d399;
+            --accent-orange: #fb923c;
+            --accent-pink: #f472b6;
+            --accent-cyan: #22d3ee;
+            --accent-red: #f87171;
+            --gradient-1: linear-gradient(135deg, #5b8af5 0%, #a78bfa 100%);
+            --gradient-2: linear-gradient(135deg, #34d399 0%, #22d3ee 100%);
+            --gradient-3: linear-gradient(135deg, #fb923c 0%, #f472b6 100%);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.7;
+            min-height: 100vh;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: var(--bg-primary); }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+        /* Header */
+        .hero {
+            background: linear-gradient(135deg, #0f1117 0%, #1a1d2e 50%, #1e1a35 100%);
+            border-bottom: 1px solid var(--border);
+            padding: 60px 0 50px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle at 30% 50%, rgba(91,138,245,0.06) 0%, transparent 50%),
+                        radial-gradient(circle at 70% 50%, rgba(167,139,250,0.06) 0%, transparent 50%);
+            animation: heroGlow 15s ease-in-out infinite;
+        }
+        @keyframes heroGlow {
+            0%, 100% { transform: translate(0, 0); }
+            50% { transform: translate(-20px, 10px); }
+        }
+        .hero-content { position: relative; z-index: 1; }
+        .hero h1 {
+            font-size: 2.8rem;
+            font-weight: 800;
+            background: var(--gradient-1);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 12px;
+            letter-spacing: -1px;
+        }
+        .hero p {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+            font-weight: 300;
+            max-width: 700px;
+            margin: 0 auto;
+        }
+        .hero .badge-row {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 24px;
+            flex-wrap: wrap;
+        }
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            border: 1px solid var(--border);
+            background: rgba(255,255,255,0.03);
+            color: var(--text-secondary);
+            backdrop-filter: blur(4px);
+        }
+        .badge.blue { border-color: rgba(91,138,245,0.3); color: var(--accent-blue); }
+        .badge.green { border-color: rgba(52,211,153,0.3); color: var(--accent-green); }
+        .badge.purple { border-color: rgba(167,139,250,0.3); color: var(--accent-purple); }
+        .badge.orange { border-color: rgba(251,146,60,0.3); color: var(--accent-orange); }
+
+        /* Navigation */
+        .toc {
+            max-width: 1100px;
+            margin: -20px auto 40px;
+            padding: 0 24px;
+            position: relative;
+            z-index: 2;
+        }
+        .toc-inner {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 28px 32px;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+            gap: 8px;
+        }
+        .toc a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.9rem;
+            padding: 8px 12px;
+            border-radius: 8px;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .toc a:hover {
+            background: rgba(91,138,245,0.08);
+            color: var(--accent-blue);
+            transform: translateX(4px);
+        }
+        .toc a .num {
+            font-weight: 600;
+            font-size: 0.75rem;
+            color: var(--accent-blue);
+            background: rgba(91,138,245,0.1);
+            padding: 2px 8px;
+            border-radius: 6px;
+            min-width: 28px;
+            text-align: center;
+        }
+
+        /* Container */
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 0 24px 80px;
+        }
+
+        /* Sections */
+        .section {
+            margin-bottom: 56px;
+            animation: fadeInUp 0.6s ease-out;
+        }
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            margin-bottom: 20px;
+            padding-bottom: 14px;
+            border-bottom: 1px solid var(--border);
+        }
+        .section-header .icon {
+            width: 42px;
+            height: 42px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.3rem;
+            flex-shrink: 0;
+        }
+        .section-header .icon.blue { background: rgba(91,138,245,0.12); }
+        .section-header .icon.green { background: rgba(52,211,153,0.12); }
+        .section-header .icon.purple { background: rgba(167,139,250,0.12); }
+        .section-header .icon.orange { background: rgba(251,146,60,0.12); }
+        .section-header .icon.pink { background: rgba(244,114,182,0.12); }
+        .section-header .icon.cyan { background: rgba(34,211,238,0.12); }
+        .section-header .icon.red { background: rgba(248,113,113,0.12); }
+
+        .section-header h2 {
+            font-size: 1.6rem;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+        }
+
+        .section-desc {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+            margin-bottom: 24px;
+            line-height: 1.8;
+        }
+        .section-desc strong {
+            color: var(--text-primary);
+        }
+
+        /* Diagram Card */
+        .diagram-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 32px;
+            margin-bottom: 24px;
+            overflow-x: auto;
+            transition: border-color 0.3s;
+        }
+        .diagram-card:hover {
+            border-color: rgba(91,138,245,0.3);
+        }
+        .diagram-card .mermaid {
+            display: flex;
+            justify-content: center;
+        }
+
+        /* Sub-headers */
+        h3 {
+            font-size: 1.15rem;
+            font-weight: 600;
+            margin: 32px 0 16px;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        h3::before {
+            content: '';
+            width: 4px;
+            height: 20px;
+            background: var(--gradient-1);
+            border-radius: 2px;
+        }
+
+        /* Tables */
+        .table-wrapper {
+            overflow-x: auto;
+            margin-bottom: 24px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.88rem;
+        }
+        thead {
+            background: rgba(91,138,245,0.06);
+        }
+        th {
+            padding: 14px 18px;
+            text-align: left;
+            font-weight: 600;
+            color: var(--accent-blue);
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid var(--border);
+        }
+        td {
+            padding: 12px 18px;
+            border-bottom: 1px solid rgba(45,50,80,0.5);
+            color: var(--text-secondary);
+        }
+        tr:last-child td { border-bottom: none; }
+        tr:hover td { background: rgba(91,138,245,0.03); }
+        td code {
+            background: rgba(91,138,245,0.1);
+            color: var(--accent-blue);
+            padding: 2px 7px;
+            border-radius: 4px;
+            font-size: 0.82rem;
+            font-family: 'JetBrains Mono', 'Fira Code', monospace;
+        }
+        td strong { color: var(--text-primary); }
+
+        /* Info cards */
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 14px;
+            margin-bottom: 24px;
+        }
+        .info-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 18px;
+            transition: all 0.3s;
+        }
+        .info-card:hover {
+            transform: translateY(-2px);
+            border-color: rgba(91,138,245,0.3);
+            box-shadow: 0 8px 30px rgba(0,0,0,0.2);
+        }
+        .info-card .label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+        .info-card .value {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        .info-card .sub {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+
+        /* Callout */
+        .callout {
+            background: rgba(91,138,245,0.06);
+            border-left: 3px solid var(--accent-blue);
+            border-radius: 0 10px 10px 0;
+            padding: 16px 20px;
+            margin-bottom: 24px;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+        }
+        .callout.green {
+            background: rgba(52,211,153,0.06);
+            border-left-color: var(--accent-green);
+        }
+        .callout.orange {
+            background: rgba(251,146,60,0.06);
+            border-left-color: var(--accent-orange);
+        }
+        .callout.red {
+            background: rgba(248,113,113,0.06);
+            border-left-color: var(--accent-red);
+        }
+
+        /* Mermaid overrides for dark theme */
+        .mermaid svg {
+            max-width: 100%;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .hero h1 { font-size: 1.8rem; }
+            .toc-inner { grid-template-columns: 1fr; }
+            .diagram-card { padding: 16px; }
+            .section-header h2 { font-size: 1.3rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Hero -->
+    <header class="hero">
+        <div class="hero-content">
+            <h1>E-Commerce Spring Cloud Native</h1>
+            <p>High-Level Design &amp; Data Flow Diagrams — Microservices Architecture with Event-Driven Communication</p>
+            <div class="badge-row">
+                <span class="badge blue">☕ Java 21</span>
+                <span class="badge green">🍃 Spring Boot 3.4.1</span>
+                <span class="badge purple">📡 Apache Kafka</span>
+                <span class="badge orange">🐬 MySQL 8.3</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Table of Contents -->
+    <nav class="toc">
+        <div class="toc-inner">
+            <a href="#arch"><span class="num">1</span> System Architecture</a>
+            <a href="#services"><span class="num">2</span> Service Decomposition</a>
+            <a href="#order-flow"><span class="num">3</span> Order Placement Flow</a>
+            <a href="#outbox"><span class="num">4</span> Outbox Pattern</a>
+            <a href="#auth"><span class="num">5</span> User Authentication</a>
+            <a href="#inventory"><span class="num">6</span> Inventory Sync</a>
+            <a href="#kafka"><span class="num">7</span> Kafka Event Topology</a>
+            <a href="#er"><span class="num">8</span> ER Diagrams</a>
+            <a href="#infra"><span class="num">9</span> Infrastructure</a>
+            <a href="#patterns"><span class="num">10</span> Communication Patterns</a>
+            <a href="#stack"><span class="num">11</span> Technology Stack</a>
+        </div>
+    </nav>
+
+    <main class="container">
+
+        <!-- 1. System Architecture -->
+        <section class="section" id="arch">
+            <div class="section-header">
+                <div class="icon blue">🏗️</div>
+                <h2>1. System Architecture Overview</h2>
+            </div>
+            <p class="section-desc">
+                The platform is a <strong>microservices-based e-commerce system</strong> built with
+                <strong>Spring Boot 3.4 / Java 21</strong>, containerized via <strong>Docker Compose</strong>,
+                and using <strong>Apache Kafka</strong> for asynchronous event-driven communication with a
+                <strong>Transactional Outbox Pattern</strong> for reliability.
+            </p>
+            <div class="diagram-card">
+                <div class="mermaid">
+graph TB
+    subgraph Client Layer
+        CLIENT["🌐 Client / Browser / Mobile App"]
+    end
+
+    subgraph Service Layer
+        US["👤 User Service\n:8084"]
+        OS["📦 Order Service\n:8082"]
+        IS["📋 Inventory Service\n:8081"]
+        PS["💳 Payment Service\n:8083"]
+    end
+
+    subgraph Messaging Layer
+        ZK["🐘 Zookeeper\n:2181"]
+        KAFKA["📡 Apache Kafka\n:9092"]
+        KD["🔍 Kafdrop UI\n:9000"]
+    end
+
+    subgraph Data Layer
+        UDB[("🗄️ user_db\nMySQL :3310")]
+        ODB[("🗄️ order_db\nMySQL :3308")]
+        IDB[("🗄️ inventory_db\nMySQL :3307")]
+        PDB[("🗄️ payment_db\nMySQL :3309")]
+    end
+
+    subgraph Shared Library
+        COM["📚 commons\nShared DTOs, Events, Clients"]
+    end
+
+    CLIENT --> US
+    CLIENT --> OS
+    CLIENT --> IS
+    CLIENT --> PS
+
+    US --> UDB
+    OS --> ODB
+    IS --> IDB
+    PS --> PDB
+
+    OS -- "HTTP: Check/Reduce Stock" --> IS
+    OS -- "Kafka: OrderPlaceEvent" --> KAFKA
+    KAFKA -- "Kafka: OrderPlaceEvent" --> PS
+
+    ZK --> KAFKA
+    KD --> KAFKA
+
+    COM -.-> US
+    COM -.-> OS
+    COM -.-> IS
+    COM -.-> PS
+                </div>
+            </div>
+        </section>
+
+        <!-- 2. Service Decomposition -->
+        <section class="section" id="services">
+            <div class="section-header">
+                <div class="icon green">📊</div>
+                <h2>2. Service Decomposition</h2>
+            </div>
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Service</th>
+                            <th>Port</th>
+                            <th>Database</th>
+                            <th>Responsibilities</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>User Service</strong></td>
+                            <td><code>8084</code></td>
+                            <td><code>user_db</code> (:3310)</td>
+                            <td>Registration, login, JWT authentication, profile &amp; address management</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Order Service</strong></td>
+                            <td><code>8082</code></td>
+                            <td><code>order_db</code> (:3308)</td>
+                            <td>Order placement, inventory validation (sync HTTP), event publishing (Kafka), outbox pattern</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Inventory Service</strong></td>
+                            <td><code>8081</code></td>
+                            <td><code>inventory_db</code> (:3307)</td>
+                            <td>Stock check, stock addition, stock reduction</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Payment Service</strong></td>
+                            <td><code>8083</code></td>
+                            <td><code>payment_db</code> (:3309)</td>
+                            <td>Consume order events, process payments, payment history</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Commons Library</strong></td>
+                            <td>—</td>
+                            <td>—</td>
+                            <td>Shared events (<code>OrderPlaceEvent</code>, <code>PaymentCompletedEvent</code>, <code>PaymentFailedEvent</code>), DTOs, HTTP client interfaces</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- 3. Order Placement Flow -->
+        <section class="section" id="order-flow">
+            <div class="section-header">
+                <div class="icon purple">📦</div>
+                <h2>3. Core Data Flow — Order Placement (End-to-End)</h2>
+            </div>
+            <p class="section-desc">
+                This is the <strong>primary business flow</strong> through the system. It combines synchronous HTTP calls
+                with asynchronous Kafka event-driven processing and a reliability guarantee via the <strong>Outbox Pattern</strong>.
+            </p>
+            <div class="diagram-card">
+                <div class="mermaid">
+sequenceDiagram
+    autonumber
+    participant C as 🌐 Client
+    participant OS as 📦 Order Service
+    participant ODB as 🗄️ order_db
+    participant IS as 📋 Inventory Service
+    participant IDB as 🗄️ inventory_db
+    participant K as 📡 Kafka
+    participant PS as 💳 Payment Service
+    participant PDB as 🗄️ payment_db
+
+    Note over C,PDB: Phase 1 — Order Placement (Synchronous)
+    C->>+OS: POST /api/order (OrderRequest)
+    OS->>OS: Generate UUID orderNumber
+    OS->>OS: Map OrderRequest → Order + OrderLineItems
+    OS->>OS: Calculate totalAmount from line items
+    OS->>ODB: Save Order + OrderLineItems (JPA @Transactional)
+    ODB-->>OS: ✅ Persisted
+
+    Note over C,PDB: Phase 2 — Event Publishing (Async + Retry)
+    OS->>OS: Build OrderPlaceEvent from saved Order
+    OS->>+K: kafkaTemplate.send("notificationTopic", event)
+    K-->>-OS: ✅ Acknowledged
+
+    alt Kafka publish fails (after 3 retries)
+        OS->>ODB: Save to OutBox table (PENDING)
+        Note over OS,ODB: Outbox Relay Worker picks up later
+    end
+
+    OS-->>-C: 201 "Order Placed Successfully"
+
+    Note over C,PDB: Phase 3 — Payment Processing (Async / Event-Driven)
+    K->>+PS: OrderEventConsumer receives OrderPlaceEvent
+    PS->>PS: processPayment(event)
+    PS->>PDB: Save Payment (PENDING → COMPLETED/FAILED)
+    PDB-->>PS: ✅ Persisted
+    PS-->>-K: Acknowledge message
+                </div>
+            </div>
+
+            <h3>Step-by-Step Data Flow</h3>
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr><th>Step</th><th>Component</th><th>Action</th><th>Data Involved</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>1</strong></td>
+                            <td>Client → Order Service</td>
+                            <td><code>POST /api/order</code></td>
+                            <td><code>OrderRequest{customerId, orderLineItemsDtoList[{skuCode, price, quantity}]}</code></td>
+                        </tr>
+                        <tr>
+                            <td><strong>2</strong></td>
+                            <td>Order Service</td>
+                            <td>Generate unique <code>orderNumber</code> (UUID)</td>
+                            <td>—</td>
+                        </tr>
+                        <tr>
+                            <td><strong>3</strong></td>
+                            <td>Order Service</td>
+                            <td>Map DTOs → JPA entities</td>
+                            <td><code>Order{orderNumber, customerId, totalAmount}</code>, <code>OrderLineItems{skuCode, price, quantity}</code></td>
+                        </tr>
+                        <tr>
+                            <td><strong>4</strong></td>
+                            <td>Order Service → order_db</td>
+                            <td>Persist order within <code>@Transactional</code></td>
+                            <td><code>orders</code> + <code>order_line_items</code> tables</td>
+                        </tr>
+                        <tr>
+                            <td><strong>5</strong></td>
+                            <td>Order Service</td>
+                            <td>Build Kafka event</td>
+                            <td><code>OrderPlaceEvent{orderNumber, customerId, totalAmount, orderTime, items[]}</code></td>
+                        </tr>
+                        <tr>
+                            <td><strong>6</strong></td>
+                            <td>Order Service → Kafka</td>
+                            <td>Publish to <code>notificationTopic</code> with retry (3 attempts, 2s backoff × 2 multiplier)</td>
+                            <td>JSON-serialized <code>OrderPlaceEvent</code></td>
+                        </tr>
+                        <tr>
+                            <td><strong>7</strong></td>
+                            <td>Kafka → Payment Service</td>
+                            <td><code>OrderEventConsumer</code> receives event (<code>payment-service-group</code>)</td>
+                            <td>Deserialized <code>OrderPlaceEvent</code></td>
+                        </tr>
+                        <tr>
+                            <td><strong>8</strong></td>
+                            <td>Payment Service → payment_db</td>
+                            <td>Create <code>Payment</code> record</td>
+                            <td><code>Payment{paymentId, orderNumber, customerId, amount, currency, paymentMethod, status}</code></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- 4. Outbox Pattern -->
+        <section class="section" id="outbox">
+            <div class="section-header">
+                <div class="icon orange">🔄</div>
+                <h2>4. Outbox Pattern — Reliability Guarantee</h2>
+            </div>
+            <p class="section-desc">
+                When Kafka is unavailable, the system falls back to the <strong>Transactional Outbox Pattern</strong>
+                to ensure <strong>at-least-once delivery</strong>.
+            </p>
+            <div class="diagram-card">
+                <div class="mermaid">
+flowchart TD
+    A["Order Service: placeOrder()"] --> B{"Kafka.send() succeeded?"}
+    B -- "✅ Yes" --> C["Event delivered to notificationTopic"]
+    B -- "❌ No after 3 retries" --> D["@Recover: Save to OutBox table PENDING"]
+    D --> E["OutboxRelayWorker runs every 30s"]
+    E --> F["Fetch PENDING events retryCount less than 5"]
+    F --> G["Set status → PROCESSING"]
+    G --> H{"Kafka.send() succeeded?"}
+    H -- "✅ Yes" --> I["Set status → PUBLISH"]
+    H -- "❌ No" --> J["Increment retryCount"]
+    J --> K{"retryCount >= 5?"}
+    K -- "Yes" --> L["Set status → FAILED Dead letter"]
+    K -- "No" --> M["Set status → PENDING retry next cycle"]
+
+    style A fill:#4a90d9,color:#fff
+    style C fill:#27ae60,color:#fff
+    style I fill:#27ae60,color:#fff
+    style L fill:#e74c3c,color:#fff
+                </div>
+            </div>
+
+            <h3>OutBox Entity Schema</h3>
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr><th>Field</th><th>Type</th><th>Description</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td><code>id</code></td><td>UUID</td><td>Primary key (auto-generated)</td></tr>
+                        <tr><td><code>aggregateType</code></td><td>String</td><td>Entity type (e.g. <code>"ORDER"</code>)</td></tr>
+                        <tr><td><code>aggregateId</code></td><td>String</td><td>Business key (e.g. <code>orderNumber</code>)</td></tr>
+                        <tr><td><code>eventType</code></td><td>String</td><td>Event name (e.g. <code>"ORDER_PLACED"</code>)</td></tr>
+                        <tr><td><code>payload</code></td><td>JSON</td><td>Serialized <code>OrderRequest</code></td></tr>
+                        <tr><td><code>status</code></td><td>Enum</td><td><code>PENDING</code> → <code>PROCESSING</code> → <code>PUBLISH</code> / <code>FAILED</code></td></tr>
+                        <tr><td><code>retryCount</code></td><td>int</td><td>Current retry count (max 5)</td></tr>
+                        <tr><td><code>createdAt</code></td><td>Timestamp</td><td>Auto-set on creation</td></tr>
+                        <tr><td><code>lastModifiedAt</code></td><td>Timestamp</td><td>Auto-updated on changes</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- 5. User Authentication -->
+        <section class="section" id="auth">
+            <div class="section-header">
+                <div class="icon pink">🔐</div>
+                <h2>5. User Authentication Flow</h2>
+            </div>
+            <div class="diagram-card">
+                <div class="mermaid">
+sequenceDiagram
+    autonumber
+    participant C as 🌐 Client
+    participant AC as 🔐 AuthController
+    participant AS as AuthService
+    participant DB as 🗄️ user_db
+    participant JWT as JwtTokenProvider
+
+    Note over C,JWT: Registration Flow
+    C->>+AC: POST /api/auth/register (RegisterRequest)
+    AC->>+AS: register(request)
+    AS->>AS: Encode password (BCrypt)
+    AS->>DB: Save User (CUSTOMER role, ACTIVE status)
+    DB-->>AS: ✅ Persisted
+    AS-->>-AC: Success
+    AC-->>-C: 201 "User registered successfully"
+
+    Note over C,JWT: Login Flow
+    C->>+AC: POST /api/auth/login (LoginRequest)
+    AC->>+AS: login(request)
+    AS->>DB: Find user by email
+    DB-->>AS: User entity
+    AS->>AS: Verify password (BCrypt)
+    AS->>+JWT: generateToken(email)
+    JWT-->>-AS: JWT token string
+    AS-->>-AC: LoginResponse token
+    AC-->>-C: 200 LoginResponse token
+
+    Note over C,JWT: Authenticated Request Flow
+    C->>+AC: GET /api/user/profile (Authorization: Bearer JWT)
+    AC->>AC: JwtAuthenticationFilter intercepts
+    AC->>+JWT: extractEmail, validateToken
+    JWT-->>-AC: email authenticated principal
+    AC->>+AS: getProfile(email)
+    AS->>DB: Find user + addresses
+    DB-->>AS: User + Address entities
+    AS-->>-AC: UserProfileResponse
+    AC-->>-C: 200 UserProfileResponse
+                </div>
+            </div>
+
+            <h3>Security Architecture</h3>
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr><th>Component</th><th>Source File</th><th>Role</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>SecurityConfig</strong></td>
+                            <td><code>user-service/.../security/SecurityConfig.java</code></td>
+                            <td>Stateless session, CSRF disabled, public endpoints (<code>/api/auth/**</code>, <code>/actuator/**</code>), JWT filter registration</td>
+                        </tr>
+                        <tr>
+                            <td><strong>JwtAuthenticationFilter</strong></td>
+                            <td><code>user-service/.../security/JwtAuthenticationFilter.java</code></td>
+                            <td>Intercepts every request, extracts &amp; validates JWT, sets <code>SecurityContext</code></td>
+                        </tr>
+                        <tr>
+                            <td><strong>JwtTokenProvider</strong></td>
+                            <td><code>user-service/.../security/JwtTokenProvider.java</code></td>
+                            <td>Token generation &amp; validation using <code>JWT_SECRET</code> environment variable</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- 6. Inventory Sync -->
+        <section class="section" id="inventory">
+            <div class="section-header">
+                <div class="icon cyan">📋</div>
+                <h2>6. Inventory Service — Synchronous Data Flow</h2>
+            </div>
+            <p class="section-desc">
+                The Inventory Service is called <strong>synchronously</strong> by the Order Service via the shared
+                <code>InventoryClient</code> HTTP interface defined in the commons library.
+            </p>
+            <div class="diagram-card">
+                <div class="mermaid">
+flowchart LR
+    subgraph Order Service
+        OS_SVC["OrderServiceImpl"]
+    end
+    subgraph Commons Library
+        IC["InventoryClient\n(HTTP Interface)"]
+    end
+    subgraph Inventory Service
+        IC_CTRL["InventoryController"]
+        IC_SVC["InventoryService"]
+        IC_DB[("inventory_db")]
+    end
+
+    OS_SVC -- "isInStock(skuCodes)" --> IC
+    IC -- "GET /api/inventory/items?skuCode=..." --> IC_CTRL
+    IC_CTRL --> IC_SVC
+    IC_SVC --> IC_DB
+    IC_DB --> IC_SVC
+    IC_SVC --> IC_CTRL
+    IC_CTRL -- "List of InventoryResponse" --> IC
+
+    OS_SVC -- "reduceStock(requests)" --> IC
+    IC -- "POST /api/inventory/reduce" --> IC_CTRL
+                </div>
+            </div>
+
+            <h3>Inventory API Endpoints</h3>
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr><th>Method</th><th>Endpoint</th><th>Purpose</th><th>Request</th><th>Response</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>GET</strong></td>
+                            <td><code>/api/inventory/items?skuCode=...</code></td>
+                            <td>Check stock availability</td>
+                            <td>Query param: <code>List&lt;skuCode&gt;</code></td>
+                            <td><code>List&lt;InventoryResponse{skuCode, isInStock}&gt;</code></td>
+                        </tr>
+                        <tr>
+                            <td><strong>POST</strong></td>
+                            <td><code>/api/inventory/add</code></td>
+                            <td>Add new inventory</td>
+                            <td><code>InventoryRequest{skuCode, quantity}</code></td>
+                            <td>201 Created</td>
+                        </tr>
+                        <tr>
+                            <td><strong>POST</strong></td>
+                            <td><code>/api/inventory/reduce</code></td>
+                            <td>Reduce stock after order</td>
+                            <td><code>List&lt;InventoryRequest{skuCode, quantity}&gt;</code></td>
+                            <td>200 OK</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- 7. Kafka Topology -->
+        <section class="section" id="kafka">
+            <div class="section-header">
+                <div class="icon purple">📡</div>
+                <h2>7. Kafka Event Topology</h2>
+            </div>
+            <div class="diagram-card">
+                <div class="mermaid">
+flowchart LR
+    subgraph Producers
+        OS["📦 Order Service"]
+        PS_PUB["💳 Payment Service"]
+    end
+
+    subgraph Kafka Topics
+        NT["📫 notificationTopic"]
+        PT["📫 paymentTopic"]
+    end
+
+    subgraph Consumers
+        PS_CON["💳 Payment Service\n(payment-service-group)"]
+        OS_CON["📦 Order Service\n(future consumer)"]
+    end
+
+    OS -- "OrderPlaceEvent" --> NT
+    NT -- "OrderPlaceEvent" --> PS_CON
+    PS_PUB -- "PaymentCompletedEvent" --> PT
+    PS_PUB -- "PaymentFailedEvent" --> PT
+    PT -- "PaymentCompletedEvent /\nPaymentFailedEvent" --> OS_CON
+                </div>
+            </div>
+
+            <h3>Event Catalog</h3>
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr><th>Event</th><th>Producer</th><th>Topic</th><th>Consumer(s)</th><th>Payload</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><code>OrderPlaceEvent</code></td>
+                            <td>Order Service</td>
+                            <td><code>notificationTopic</code></td>
+                            <td>Payment Service</td>
+                            <td><code>{orderNumber, customerId, totalAmount, orderTime, items[{skuCode, price, quantity}]}</code></td>
+                        </tr>
+                        <tr>
+                            <td><code>PaymentCompletedEvent</code></td>
+                            <td>Payment Service</td>
+                            <td><code>paymentTopic</code></td>
+                            <td>Order Service (planned)</td>
+                            <td><code>{paymentId, orderNumber, customerId, amount, paymentMethod, gatewayTransactionId, paidAt}</code></td>
+                        </tr>
+                        <tr>
+                            <td><code>PaymentFailedEvent</code></td>
+                            <td>Payment Service</td>
+                            <td><code>paymentTopic</code></td>
+                            <td>Order Service (planned)</td>
+                            <td><code>{paymentId, orderNumber, customerId, amount, failureReason, failedAt}</code></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- 8. ER Diagrams -->
+        <section class="section" id="er">
+            <div class="section-header">
+                <div class="icon green">🗄️</div>
+                <h2>8. Entity Relationship Diagrams</h2>
+            </div>
+
+            <h3>User Service Data Model</h3>
+            <div class="diagram-card">
+                <div class="mermaid">
+erDiagram
+    USERS {
+        Long id PK
+        String full_name
+        String email UK
+        String phone
+        String password_hash
+        Enum role
+        Enum status
+        DateTime created_at
+        DateTime updated_at
+    }
+    ADDRESSES {
+        Long id PK
+        Long user_id FK
+        String label
+        String street
+        String city
+        String state
+        String pincode
+        String phone
+        Boolean is_default
+    }
+    USERS ||--o{ ADDRESSES : "has many"
+                </div>
+            </div>
+
+            <h3>Order Service Data Model</h3>
+            <div class="diagram-card">
+                <div class="mermaid">
+erDiagram
+    ORDERS {
+        Long id PK
+        String order_number UK
+        Long customer_id
+        BigDecimal total_amount
+    }
+    ORDER_LINE_ITEMS {
+        Long id PK
+        Long order_id FK
+        String sku_code
+        BigDecimal price
+        Integer quantity
+    }
+    OUT_BOX {
+        UUID id PK
+        String aggregate_type
+        String aggregate_id
+        String event_type
+        JSON payload
+        Enum status
+        Int retry_count
+        DateTime created_at
+        DateTime last_modified_at
+    }
+    ORDERS ||--o{ ORDER_LINE_ITEMS : "contains"
+                </div>
+            </div>
+
+            <h3>Payment Service Data Model</h3>
+            <div class="diagram-card">
+                <div class="mermaid">
+erDiagram
+    PAYMENTS {
+        Long id PK
+        String payment_id UK
+        String order_number
+        Long customer_id
+        BigDecimal amount
+        String currency
+        Enum payment_method
+        String gateway_transaction_id UK
+        Enum status
+        String failure_reason
+        DateTime paid_at
+        DateTime created_at
+        DateTime updated_at
+    }
+                </div>
+            </div>
+
+            <h3>Inventory Service Data Model</h3>
+            <div class="diagram-card">
+                <div class="mermaid">
+erDiagram
+    INVENTORY {
+        Long id PK
+        String sku_code UK
+        Integer quantity
+        String status
+    }
+                </div>
+            </div>
+        </section>
+
+        <!-- 9. Infrastructure -->
+        <section class="section" id="infra">
+            <div class="section-header">
+                <div class="icon red">🐳</div>
+                <h2>9. Infrastructure &amp; Networking</h2>
+            </div>
+            <p class="section-desc">
+                All services run on a shared <strong>Docker bridge network</strong> (<code>ecommerce-network</code>),
+                enabling service-to-service communication via container hostnames.
+            </p>
+            <div class="diagram-card">
+                <div class="mermaid">
+graph TB
+    subgraph ecommerceNetwork ["🌐 Docker Bridge Network: ecommerce-network"]
+        subgraph Messaging
+            ZK["Zookeeper :2181"]
+            KAFKA["Kafka :29092 internal\n:9092 host"]
+            KD["Kafdrop :9000"]
+        end
+
+        subgraph UserDomain ["User Domain"]
+            USER_SVC["user-service :8080\nhost :8084"]
+            USER_DB["user_db MySQL :3306\nhost :3310"]
+        end
+
+        subgraph OrderDomain ["Order Domain"]
+            ORDER_SVC["order-service :8080\nhost :8082"]
+            ORDER_DB["order_db MySQL :3306\nhost :3308"]
+        end
+
+        subgraph InventoryDomain ["Inventory Domain"]
+            INV_SVC["inventory-service :8080\nhost :8081"]
+            INV_DB["inventory_db MySQL :3306\nhost :3307"]
+        end
+
+        subgraph PaymentDomain ["Payment Domain"]
+            PAY_SVC["payment-service :8080\nhost :8083"]
+            PAY_DB["payment_db MySQL :3306\nhost :3309"]
+        end
+    end
+
+    ORDER_SVC -- "HTTP\nhttp://inventory-service:8080" --> INV_SVC
+    ORDER_SVC -- "Kafka\nkafka:29092" --> KAFKA
+    PAY_SVC -- "Kafka\nkafka:29092" --> KAFKA
+                </div>
+            </div>
+        </section>
+
+        <!-- 10. Communication Patterns -->
+        <section class="section" id="patterns">
+            <div class="section-header">
+                <div class="icon blue">🔗</div>
+                <h2>10. Communication Patterns Summary</h2>
+            </div>
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr><th>Pattern</th><th>Source</th><th>Target</th><th>Mechanism</th><th>Use Case</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Sync REST</strong></td>
+                            <td>Order Service</td>
+                            <td>Inventory Service</td>
+                            <td>HTTP via <code>InventoryClient</code> (Spring HTTP Interface)</td>
+                            <td>Stock check &amp; reduction during order placement</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Async Event</strong></td>
+                            <td>Order Service</td>
+                            <td>Payment Service</td>
+                            <td>Kafka (<code>notificationTopic</code>)</td>
+                            <td>Trigger payment processing after order is placed</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Async Event</strong></td>
+                            <td>Payment Service</td>
+                            <td>Order Service (planned)</td>
+                            <td>Kafka (<code>paymentTopic</code>)</td>
+                            <td>Notify order status update after payment result</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Fallback</strong></td>
+                            <td>Order Service</td>
+                            <td>Outbox → Kafka</td>
+                            <td>Outbox Relay Worker (scheduled every 30s)</td>
+                            <td>Guaranteed delivery when Kafka is temporarily down</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Auth</strong></td>
+                            <td>Client</td>
+                            <td>User Service</td>
+                            <td>JWT Bearer Token</td>
+                            <td>Stateless authentication for protected endpoints</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- 11. Tech Stack -->
+        <section class="section" id="stack">
+            <div class="section-header">
+                <div class="icon cyan">⚙️</div>
+                <h2>11. Technology Stack</h2>
+            </div>
+            <div class="info-grid">
+                <div class="info-card">
+                    <div class="label">Language</div>
+                    <div class="value">Java</div>
+                    <div class="sub">Version 21 (LTS)</div>
+                </div>
+                <div class="info-card">
+                    <div class="label">Framework</div>
+                    <div class="value">Spring Boot</div>
+                    <div class="sub">Version 3.4.1</div>
+                </div>
+                <div class="info-card">
+                    <div class="label">Database</div>
+                    <div class="value">MySQL</div>
+                    <div class="sub">Version 8.3.0</div>
+                </div>
+                <div class="info-card">
+                    <div class="label">Messaging</div>
+                    <div class="value">Apache Kafka</div>
+                    <div class="sub">Latest (Confluent)</div>
+                </div>
+                <div class="info-card">
+                    <div class="label">Build</div>
+                    <div class="value">Maven</div>
+                    <div class="sub">Multi-module POM</div>
+                </div>
+                <div class="info-card">
+                    <div class="label">Containers</div>
+                    <div class="value">Docker Compose</div>
+                    <div class="sub">Bridge network</div>
+                </div>
+                <div class="info-card">
+                    <div class="label">Security</div>
+                    <div class="value">Spring Security</div>
+                    <div class="sub">JWT + BCrypt</div>
+                </div>
+                <div class="info-card">
+                    <div class="label">ORM</div>
+                    <div class="value">Spring Data JPA</div>
+                    <div class="sub">Hibernate</div>
+                </div>
+                <div class="info-card">
+                    <div class="label">Serialization</div>
+                    <div class="value">Jackson</div>
+                    <div class="sub">JSON</div>
+                </div>
+                <div class="info-card">
+                    <div class="label">Monitoring</div>
+                    <div class="value">Kafdrop + Actuator</div>
+                    <div class="sub">Kafka UI &amp; health</div>
+                </div>
+                <div class="info-card">
+                    <div class="label">Utilities</div>
+                    <div class="value">Lombok</div>
+                    <div class="sub">Commons Lang3/Collections4</div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer style="text-align:center; padding:40px 20px; border-top:1px solid var(--border); color:var(--text-muted); font-size:0.85rem;">
+        E-Commerce Spring Cloud Native — High-Level Design Document
+    </footer>
+
+    <!-- Mermaid.js -->
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+    <script>
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: 'dark',
+            themeVariables: {
+                primaryColor: '#2d3250',
+                primaryTextColor: '#e8eaf0',
+                primaryBorderColor: '#5b8af5',
+                lineColor: '#5b8af5',
+                secondaryColor: '#1e2235',
+                tertiaryColor: '#1a1d2e',
+                fontFamily: 'Inter, sans-serif',
+                fontSize: '14px',
+                noteBkgColor: '#252a40',
+                noteTextColor: '#e8eaf0',
+                noteBorderColor: '#5b8af5',
+                actorBkg: '#2d3250',
+                actorBorder: '#5b8af5',
+                actorTextColor: '#e8eaf0',
+                signalColor: '#e8eaf0',
+                signalTextColor: '#e8eaf0',
+                labelBoxBkgColor: '#1e2235',
+                labelBoxBorderColor: '#5b8af5',
+                labelTextColor: '#e8eaf0',
+                loopTextColor: '#a78bfa',
+                activationBorderColor: '#5b8af5',
+                activationBkgColor: '#252a40',
+                sequenceNumberColor: '#0f1117'
+            },
+            flowchart: {
+                useMaxWidth: true,
+                htmlLabels: true,
+                curve: 'basis'
+            },
+            sequence: {
+                useMaxWidth: true,
+                wrap: true,
+                width: 180
+            },
+            er: {
+                useMaxWidth: true
+            }
+        });
+    </script>
+
+</body>
+</html>
