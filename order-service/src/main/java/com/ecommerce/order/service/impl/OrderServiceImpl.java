@@ -1,11 +1,11 @@
 package com.ecommerce.order.service.impl;
 
 import com.ecommerce.commons.client.InventoryClient;
+import com.ecommerce.commons.events.OrderPlaceEvent;
 import com.ecommerce.order.dto.OrderItemDto;
 import com.ecommerce.order.dto.OrderRequest;
 import com.ecommerce.order.entities.Order;
 import com.ecommerce.order.entities.OrderLineItems;
-import com.ecommerce.order.events.OrderPlaceEvent;
 import com.ecommerce.order.repository.OrderRepository;
 import com.ecommerce.order.service.OrderService;
 import lombok.RequiredArgsConstructor;
@@ -17,6 +17,7 @@ import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
@@ -29,7 +30,7 @@ public class OrderServiceImpl implements OrderService {
     private final OrderRepository orderRepository;
     private final InventoryClient inventoryClient;
     private final KafkaTemplate<String, OrderPlaceEvent> kafkaTemplate;
-    private OutboxService outboxService;
+    private final OutboxService outboxService;
 
 
     @Override
@@ -44,11 +45,22 @@ public class OrderServiceImpl implements OrderService {
         Order order = mapToOrder(orderRequest);
         orderRepository.save(order);
 
-        //2. event creation
-        OrderPlaceEvent event = new OrderPlaceEvent(order.getOrderNumber(),order.getCustomerId(),order.getTotalAmount(),
-                Instant.now(),order.getOrderLineItemsList());
+        //2. Convert line items to event DTOs
+        List<OrderPlaceEvent.OrderLineItem> eventItems = order.getOrderLineItemsList().stream()
+                .map(item -> new OrderPlaceEvent.OrderLineItem(
+                        item.getSkuCode(), item.getPrice(), item.getQuantity()))
+                .toList();
 
-        // 3. Call the retryable method
+        //3. Event creation
+        OrderPlaceEvent event = new OrderPlaceEvent(
+                order.getOrderNumber(),
+                order.getCustomerId(),
+                order.getTotalAmount(),
+                Instant.now(),
+                eventItems
+        );
+
+        // 4. Call the retryable method
         try {
             this.publishOrderEvent(event, orderRequest, order.getOrderNumber());
         } catch (Exception e) {
@@ -78,11 +90,19 @@ public class OrderServiceImpl implements OrderService {
     private Order mapToOrder(OrderRequest orderRequest) {
         Order order = new Order();
         order.setOrderNumber(UUID.randomUUID().toString());
+        order.setCustomerId(orderRequest.customerId());
         List<OrderLineItems> orderLineItems = orderRequest.orderLineItemsDtoList()
                 .stream()
                 .map(this::mapToDto)
                 .toList();
         order.setOrderLineItemsList(orderLineItems);
+
+        // Calculate total amount from line items
+        BigDecimal totalAmount = orderLineItems.stream()
+                .map(item -> item.getPrice().multiply(BigDecimal.valueOf(item.getQuantity())))
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        order.setTotalAmount(totalAmount);
+
         return order;
     }
     private OrderLineItems mapToDto(OrderItemDto orderLineItemsDto) {

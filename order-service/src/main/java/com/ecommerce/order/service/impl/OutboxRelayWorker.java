@@ -25,7 +25,7 @@ public class OutboxRelayWorker {
     public void relayEvents() {
         // 1. Fetch PENDING or FAILED events that haven't hit the max limit
         List<OutBoxEvent> pendingEvents = outboxRepository
-                .findAllByEventStatusAndRetryCountLessThan(OutBoxEvent.OutboxStatus.PENDING, 5);
+                .findAllByStatusAndRetryCountLessThan(OutBoxEvent.OutboxStatus.PENDING, 5);
 
         for (OutBoxEvent event : pendingEvents) {
             try {

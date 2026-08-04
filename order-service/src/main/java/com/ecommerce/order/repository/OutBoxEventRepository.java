@@ -8,5 +8,5 @@ import java.util.UUID;
 
 public interface OutBoxEventRepository extends JpaRepository<OutBoxEvent, UUID> {
     //// Find events that still have a chance to be published
-    List<OutBoxEvent> findAllByEventStatusAndRetryCountLessThan(OutBoxEvent.OutboxStatus outboxStatus, int maxRetries);
+    List<OutBoxEvent> findAllByStatusAndRetryCountLessThan(OutBoxEvent.OutboxStatus status, int maxRetries);
 }
