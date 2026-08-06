@@ -211,8 +211,8 @@ All saga participants must be **idempotent** — processing the same event twice
 | Outbox pattern (relay worker)      | ✅ Implemented  | 30s polling, 5 max retries                 |
 | Inventory stock check (sync HTTP)  | ✅ Implemented  | Via `InventoryClient`                      |
 | Inventory stock reduction          | ✅ Implemented  | Transactional with rollback                |
-| Order status state machine         | 🔲 Planned      | Needs `status` field on Order entity       |
-| Payment Service                    | 🔲 Planned      | Full service to be built                   |
-| Compensating transactions          | 🔲 Planned      | Inventory release, payment refund          |
+| Order status state machine         | ✅ Implemented  | `OrderStatus` enum; PENDING→RESERVED→CONFIRMED/CANCELLED wired; SHIPPED/DELIVERED pending |
+| Payment Service                    | ✅ Implemented  | Simulated gateway; publishes completed/failed events |
+| Compensating transactions          | 🔲 Planned      | Stock release on payment failure done; payment refund pending |
 | Saga orchestrator                  | 🔲 Planned      | Central coordinator in Order Service       |
 | Dead letter queue                  | 🔲 Planned      | For permanently failed events              |
