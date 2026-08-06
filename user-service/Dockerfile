@@ -5,6 +5,7 @@ WORKDIR /app
 COPY pom.xml .
 COPY commons/pom.xml ./commons/
 COPY inventory-service/pom.xml ./inventory-service/
+COPY notification-service/pom.xml ./notification-service/
 COPY order-service/pom.xml ./order-service/
 COPY payment-service/pom.xml ./payment-service/
 COPY user-service/pom.xml ./user-service/

@@ -77,6 +77,22 @@ services:
     networks:
       - ecommerce-network
 
+  notification-service:
+    image: ${DOCKER_USERNAME}/notification-service:${IMAGE_TAG:-latest}
+    container_name: notification-service_${IMAGE_TAG:-latest}
+    build:
+      context: .
+      dockerfile: notification-service/Dockerfile
+    environment:
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:29092
+    ports:
+      - "8085:8080"
+    depends_on:
+      kafka:
+        condition: service_started
+    networks:
+      - ecommerce-network
+
   order-db:
     image: mysql:${DB_TAG:-latest}
     container_name: order_db_container

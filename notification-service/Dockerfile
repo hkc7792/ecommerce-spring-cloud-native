@@ -11,20 +11,20 @@ COPY order-service/pom.xml ./order-service/
 COPY payment-service/pom.xml ./payment-service/
 COPY user-service/pom.xml ./user-service/
 
-RUN mvn dependency:go-offline -B -pl order-service -am
+RUN mvn dependency:go-offline -B -pl notification-service -am
 
-# 4. Copy ONLY the source code for order-service
+# 4. Copy ONLY the source code for notification-service
 COPY commons/src ./commons/src
-COPY order-service/src ./order-service/src
-# IMPORTANT: If order-service depends on a common-library,
+COPY notification-service/src ./notification-service/src
+# IMPORTANT: If notification-service depends on a common-library,
 # you MUST copy the common-library/src too!
 
 # 5. Build the service
-RUN mvn clean package -pl order-service -am -DskipTests
+RUN mvn clean package -pl notification-service -am -DskipTests
 
 # Stage 2: Runtime
 FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
-COPY --from=builder /app/order-service/target/order-service-*.jar app.jar
+COPY --from=builder /app/notification-service/target/notification-service-*.jar app.jar
 EXPOSE 8080
 ENTRYPOINT ["java", "-jar", "app.jar"]
