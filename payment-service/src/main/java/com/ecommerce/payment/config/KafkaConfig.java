@@ -1,45 +1,38 @@
 package com.ecommerce.payment.config;
 
-import com.ecommerce.commons.events.OrderPlaceEvent;
-import org.apache.kafka.clients.consumer.ConsumerConfig;
-import org.apache.kafka.common.serialization.StringDeserializer;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.kafka.config.ConcurrentKafkaListenerContainerFactory;
-import org.springframework.kafka.core.ConsumerFactory;
-import org.springframework.kafka.core.DefaultKafkaConsumerFactory;
-import org.springframework.kafka.support.serializer.JsonDeserializer;
+import org.springframework.kafka.annotation.EnableKafkaRetryTopic;
+import org.springframework.scheduling.TaskScheduler;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 
-import java.util.HashMap;
-import java.util.Map;
-
+/**
+ * Kafka configuration for payment-service.
+ *
+ * The consumer factory / listener container factory are auto-configured by Spring Boot
+ * from the properties in application.yml ({@code spring.kafka.consumer.*}), including the
+ * JsonDeserializer trusted-packages / default-type settings
+ * ({@code spring.kafka.consumer.properties.spring.json.*}).
+ *
+ * {@link EnableKafkaRetryTopic} enables the non-blocking, topic-based retry + DLT
+ * machinery used by the {@code @RetryableTopic} listener in
+ * {@code com.ecommerce.payment.consumer.OrderEventConsumer}. A {@link TaskScheduler}
+ * bean is required by that machinery to schedule retry backoffs.
+ */
 @Configuration
+@EnableKafkaRetryTopic
 public class KafkaConfig {
 
-    @Value("${spring.kafka.bootstrap-servers}")
-    private String bootstrapServers;
-
+    /**
+     * Scheduler used by the retry-topic machinery to pause consumer partitions while
+     * retry backoff delays elapse (see {@code @RetryableTopic(backoff = ...)} on the
+     * consumer). Required because {@code @RetryableTopic} needs a {@link TaskScheduler}.
+     */
     @Bean
-    public ConsumerFactory<String, OrderPlaceEvent> consumerFactory() {
-        Map<String, Object> props = new HashMap<>();
-        props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
-        props.put(ConsumerConfig.GROUP_ID_CONFIG, "payment-service-group");
-        props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
-        props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, JsonDeserializer.class);
-        props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
-        props.put(JsonDeserializer.TRUSTED_PACKAGES, "com.ecommerce.commons.events,com.ecommerce.order.events");
-        props.put(JsonDeserializer.VALUE_DEFAULT_TYPE, OrderPlaceEvent.class.getName());
-        props.put(JsonDeserializer.USE_TYPE_INFO_HEADERS, false);
-
-        return new DefaultKafkaConsumerFactory<>(props);
-    }
-
-    @Bean
-    public ConcurrentKafkaListenerContainerFactory<String, OrderPlaceEvent> kafkaListenerContainerFactory() {
-        ConcurrentKafkaListenerContainerFactory<String, OrderPlaceEvent> factory =
-                new ConcurrentKafkaListenerContainerFactory<>();
-        factory.setConsumerFactory(consumerFactory());
-        return factory;
+    public TaskScheduler kafkaRetryTaskScheduler() {
+        ThreadPoolTaskScheduler scheduler = new ThreadPoolTaskScheduler();
+        scheduler.setPoolSize(2);
+        scheduler.setThreadNamePrefix("kafka-retry-");
+        return scheduler;
     }
 }

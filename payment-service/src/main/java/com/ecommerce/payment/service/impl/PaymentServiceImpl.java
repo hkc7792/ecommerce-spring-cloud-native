@@ -23,6 +23,7 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.Random;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 @Service
 @RequiredArgsConstructor
@@ -42,7 +43,8 @@ public class PaymentServiceImpl implements PaymentService {
     public void processPayment(OrderPlaceEvent orderPlaceEvent) {
         String orderNumber = orderPlaceEvent.orderNumber();
 
-        // Idempotency check — skip if already processed
+        // Idempotency key: orderNumber. At-least-once Kafka delivery is therefore safe —
+        // a redelivered order is skipped once its payment record already exists.
         if (paymentRepository.existsByOrderNumber(orderNumber)) {
             log.warn("Payment already exists for order: {}. Skipping duplicate.", orderNumber);
             return;
@@ -82,7 +84,7 @@ public class PaymentServiceImpl implements PaymentService {
                     paymentId, orderNumber, orderPlaceEvent.customerId(),
                     orderPlaceEvent.totalAmount(), method.name(), gatewayTxnId, Instant.now()
             );
-            kafkaTemplate.send(PAYMENT_TOPIC, orderNumber, event);
+            publishPaymentEvent(PAYMENT_TOPIC, orderNumber, event);
 
         } else {
             String failureReason = determineFailureReason(orderPlaceEvent.totalAmount());
@@ -97,7 +99,7 @@ public class PaymentServiceImpl implements PaymentService {
                     paymentId, orderNumber, orderPlaceEvent.customerId(),
                     orderPlaceEvent.totalAmount(), failureReason, Instant.now()
             );
-            kafkaTemplate.send(PAYMENT_TOPIC, orderNumber, event);
+            publishPaymentEvent(PAYMENT_TOPIC, orderNumber, event);
         }
     }
 
@@ -124,6 +126,43 @@ public class PaymentServiceImpl implements PaymentService {
     }
 
     // --- Private helpers ---
+
+    /**
+     * Publishes a payment result event to Kafka with a small retry loop.
+     *
+     * <p>NOTE: this service has no outbox yet — if the event still cannot be published
+     * after the retries it is logged at ERROR for operator follow-up (implementing an
+     * outbox / transactional outbox pattern is the follow-up).</p>
+     *
+     * @param topic       the Kafka topic to publish to
+     * @param orderNumber the order number used as the message key
+     * @param event       the event to publish (PaymentCompletedEvent / PaymentFailedEvent)
+     */
+    private void publishPaymentEvent(String topic, String orderNumber, Object event) {
+        final int maxAttempts = 3;
+        final long backoffMs = 500L;
+        for (int attempt = 1; attempt <= maxAttempts; attempt++) {
+            try {
+                kafkaTemplate.send(topic, orderNumber, event).get(5, TimeUnit.SECONDS);
+                return;
+            } catch (Exception e) {
+                log.warn("Failed to publish payment result for order {} to Kafka topic {} "
+                                + "(attempt {}/{}): {}",
+                        orderNumber, topic, attempt, maxAttempts, e.getMessage());
+                if (attempt < maxAttempts) {
+                    try {
+                        Thread.sleep(backoffMs);
+                    } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt();
+                        break;
+                    }
+                }
+            }
+        }
+        log.error("Payment result for order {} was NOT published to Kafka topic {} after {} "
+                        + "attempts — event lost. Implement an outbox pattern (follow-up).",
+                orderNumber, topic, maxAttempts);
+    }
 
     /**
      * Simulates a payment gateway call.

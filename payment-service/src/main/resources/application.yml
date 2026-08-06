@@ -29,3 +29,17 @@ spring:
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+    consumer:
+      group-id: payment-service-group
+      auto-offset-reset: earliest
+      # Manual ack: offsets only advance after a record is processed (or safely
+      # routed to a retry/DLT topic by @RetryableTopic) — never silently committed.
+      enable-auto-commit: false
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: "com.ecommerce.commons.events,com.ecommerce.order.events"
+        spring.json.value.default.type: com.ecommerce.commons.events.OrderPlaceEvent
+        spring.json.use.type.headers: false
+    listener:
+      ack-mode: record
