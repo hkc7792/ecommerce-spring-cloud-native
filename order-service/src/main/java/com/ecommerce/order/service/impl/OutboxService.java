@@ -1,36 +1,42 @@
 package com.ecommerce.order.service.impl;
 
-import com.ecommerce.order.dto.OrderRequest;
+import com.ecommerce.commons.events.OrderPlaceEvent;
 import com.ecommerce.order.entities.OutBoxEvent;
 import com.ecommerce.order.repository.OutBoxEventRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class OutboxService {
     private final OutBoxEventRepository outBoxEventRepository;
     private final ObjectMapper objectMapper;
 
+    /**
+     * Persists an OrderPlaceEvent that could not be published to Kafka.
+     * The OutboxRelayWorker polls PENDING rows and retries publishing.
+     */
     @Transactional
-    public void saveFailedEvent(OrderRequest orderRequest, String orderNumber) {
+    public void saveFailedEvent(OrderPlaceEvent event) {
         try {
-            String jsonPayload = objectMapper.writeValueAsString(orderRequest);
+            String jsonPayload = objectMapper.writeValueAsString(event);
 
-            OutBoxEvent event = OutBoxEvent.builder()
+            OutBoxEvent outboxEvent = OutBoxEvent.builder()
                     .aggregateType("ORDER")
-                    .aggregateId(orderNumber)
+                    .aggregateId(event.orderNumber())
                     .eventType("ORDER_PLACED")
                     .payload(jsonPayload)
-                    .status(OutBoxEvent.OutboxStatus.PENDING) // Use Enum here
+                    .status(OutBoxEvent.OutboxStatus.PENDING)
                     .retryCount(0)
                     .build();
 
-            outBoxEventRepository.save(event);
+            outBoxEventRepository.save(outboxEvent);
         } catch (Exception ex) {
-            // Log error
+            log.error("Failed to persist outbox event for order {}", event.orderNumber(), ex);
         }
     }
 }
