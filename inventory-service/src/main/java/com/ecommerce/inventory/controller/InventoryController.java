@@ -2,11 +2,14 @@ package com.ecommerce.inventory.controller;
 
 import com.ecommerce.commons.requests.InventoryRequest;
 import com.ecommerce.commons.responses.InventoryResponse;
+import com.ecommerce.inventory.realtime.StockSseService;
 import com.ecommerce.inventory.service.InventoryService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.util.List;
 
@@ -21,6 +24,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 public class InventoryController {
 
     private final InventoryService inventoryService;
+    private final StockSseService stockSseService;
 
     @GetMapping("/items")
     @ResponseStatus(HttpStatus.OK)
@@ -28,6 +32,16 @@ public class InventoryController {
     @ApiResponse(responseCode = "200", description = "Stock checked successfully")
     public List<InventoryResponse> isInStock(@RequestParam("skuCode") List<String> skuCode) {
         return inventoryService.isInStock(skuCode);
+    }
+
+    /**
+     * Server-Sent Events endpoint. The frontend opens an EventSource here and
+     * receives a "stock-update" event whenever stock changes (reduce/add).
+     */
+    @GetMapping(value = "/events", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    @Operation(summary = "Subscribe to realtime stock updates", description = "SSE stream of stock change events")
+    public SseEmitter subscribeToStockEvents() {
+        return stockSseService.subscribe();
     }
 
     @PostMapping("/add")
