@@ -1,18 +1,19 @@
 package com.ecommerce.order.consumer;
 
 import com.ecommerce.commons.client.InventoryClient;
+import com.ecommerce.commons.enums.OrderStatus;
+import com.ecommerce.commons.events.OrderStatusChangedEvent;
 import com.ecommerce.commons.events.PaymentCompletedEvent;
 import com.ecommerce.commons.events.PaymentFailedEvent;
 import com.ecommerce.commons.requests.InventoryRequest;
 import com.ecommerce.order.entities.Order;
 import com.ecommerce.order.entities.OrderLineItems;
-import com.ecommerce.order.entities.OrderStatus;
-import com.ecommerce.order.events.OrderStatusChangedEvent;
 import com.ecommerce.order.realtime.OrderStatusSseService;
 import com.ecommerce.order.repository.OrderRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.annotation.KafkaListener;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
 
 import java.time.Instant;
@@ -31,9 +32,12 @@ import java.time.Instant;
 @Slf4j
 public class PaymentEventConsumer {
 
+    private static final String ORDER_STATUS_UPDATES_TOPIC = "order-status-updates";
+
     private final OrderRepository orderRepository;
     private final OrderStatusSseService sseService;
     private final InventoryClient inventoryClient;
+    private final KafkaTemplate<String, OrderStatusChangedEvent> orderStatusKafkaTemplate;
 
     @KafkaListener(topics = "paymentTopic", groupId = "order-service-group")
     public void onPaymentResult(Object payload) {
@@ -97,7 +101,24 @@ public class PaymentEventConsumer {
     }
 
     private void publishStatus(Order order, OrderStatus previous) {
-        sseService.publishStatus(new OrderStatusChangedEvent(
-                order.getOrderNumber(), order.getCustomerId(), previous, order.getStatus(), Instant.now()));
+        OrderStatusChangedEvent event = new OrderStatusChangedEvent(
+                order.getOrderNumber(), order.getCustomerId(), previous, order.getStatus(), Instant.now());
+        // SSE is the primary realtime path; Kafka publish is best-effort.
+        sseService.publishStatus(event);
+        try {
+            orderStatusKafkaTemplate.send(ORDER_STATUS_UPDATES_TOPIC, event.orderNumber(), event)
+                    .whenComplete((result, ex) -> {
+                        if (ex != null) {
+                            log.error("Failed to publish OrderStatusChangedEvent for order {} to Kafka: {}",
+                                    event.orderNumber(), ex.getMessage());
+                        } else {
+                            log.info("OrderStatusChangedEvent for {} published to Kafka topic {}",
+                                    event.orderNumber(), ORDER_STATUS_UPDATES_TOPIC);
+                        }
+                    });
+        } catch (Exception e) {
+            log.error("Failed to publish OrderStatusChangedEvent for order {} to Kafka: {}",
+                    event.orderNumber(), e.getMessage());
+        }
     }
 }

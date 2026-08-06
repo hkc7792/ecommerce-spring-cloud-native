@@ -1,6 +1,6 @@
 package com.ecommerce.order.realtime;
 
-import com.ecommerce.order.events.OrderStatusChangedEvent;
+import com.ecommerce.commons.events.OrderStatusChangedEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;

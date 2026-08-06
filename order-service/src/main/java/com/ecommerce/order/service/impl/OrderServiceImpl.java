@@ -1,15 +1,15 @@
 package com.ecommerce.order.service.impl;
 
 import com.ecommerce.commons.client.InventoryClient;
+import com.ecommerce.commons.enums.OrderStatus;
 import com.ecommerce.commons.events.OrderPlaceEvent;
+import com.ecommerce.commons.events.OrderStatusChangedEvent;
 import com.ecommerce.commons.requests.InventoryRequest;
 import com.ecommerce.order.dto.OrderItemDto;
 import com.ecommerce.order.dto.OrderPlacementResponse;
 import com.ecommerce.order.dto.OrderRequest;
 import com.ecommerce.order.entities.Order;
 import com.ecommerce.order.entities.OrderLineItems;
-import com.ecommerce.order.entities.OrderStatus;
-import com.ecommerce.order.events.OrderStatusChangedEvent;
 import com.ecommerce.order.exceptions.OutOfStockException;
 import com.ecommerce.order.realtime.OrderStatusSseService;
 import com.ecommerce.order.repository.OrderRepository;
@@ -32,12 +32,14 @@ import java.util.concurrent.TimeUnit;
 public class OrderServiceImpl implements OrderService {
 
     private static final String NOTIFICATION_TOPIC = "notificationTopic";
+    private static final String ORDER_STATUS_UPDATES_TOPIC = "order-status-updates";
     private static final int MAX_PUBLISH_ATTEMPTS = 3;
     private static final long PUBLISH_BACKOFF_MS = 2000; // 2s, 4s backoff
 
     private final OrderRepository orderRepository;
     private final InventoryClient inventoryClient;
     private final KafkaTemplate<String, OrderPlaceEvent> kafkaTemplate;
+    private final KafkaTemplate<String, OrderStatusChangedEvent> orderStatusKafkaTemplate;
     private final OutboxService outboxService;
     private final OrderStatusSseService sseService;
 
@@ -92,14 +94,41 @@ public class OrderServiceImpl implements OrderService {
 
     /**
      * Applies a status change to the order, persists it, and pushes the
-     * transition to the customer's open SSE connections.
+     * transition to the customer's open SSE connections (primary realtime
+     * path). Also publishes the OrderStatusChangedEvent to Kafka for the
+     * notification service — best-effort, failure is only logged.
      */
     private void transition(Order order, OrderStatus newStatus) {
         OrderStatus previous = order.getStatus();
         order.setStatus(newStatus);
         orderRepository.save(order);
-        sseService.publishStatus(new OrderStatusChangedEvent(
-                order.getOrderNumber(), order.getCustomerId(), previous, newStatus, Instant.now()));
+        OrderStatusChangedEvent event = new OrderStatusChangedEvent(
+                order.getOrderNumber(), order.getCustomerId(), previous, newStatus, Instant.now());
+        sseService.publishStatus(event);
+        publishOrderStatusEvent(event);
+    }
+
+    /**
+     * Best-effort publish of a status change to the "order-status-updates"
+     * topic. SSE remains the primary realtime channel, so a Kafka failure
+     * must never fail the order flow — we just log and continue.
+     */
+    private void publishOrderStatusEvent(OrderStatusChangedEvent event) {
+        try {
+            orderStatusKafkaTemplate.send(ORDER_STATUS_UPDATES_TOPIC, event.orderNumber(), event)
+                    .whenComplete((result, ex) -> {
+                        if (ex != null) {
+                            log.error("Failed to publish OrderStatusChangedEvent for order {} to Kafka: {}",
+                                    event.orderNumber(), ex.getMessage());
+                        } else {
+                            log.info("OrderStatusChangedEvent for {} published to Kafka topic {}",
+                                    event.orderNumber(), ORDER_STATUS_UPDATES_TOPIC);
+                        }
+                    });
+        } catch (Exception e) {
+            log.error("Failed to publish OrderStatusChangedEvent for order {} to Kafka: {}",
+                    event.orderNumber(), e.getMessage());
+        }
     }
 
     private Order mapToOrder(OrderRequest orderRequest) {

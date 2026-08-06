@@ -3,7 +3,7 @@ package com.ecommerce.order.controller;
 
 import com.ecommerce.order.dto.OrderPlacementResponse;
 import com.ecommerce.order.dto.OrderRequest;
-import com.ecommerce.order.events.OrderStatusChangedEvent;
+import com.ecommerce.commons.events.OrderStatusChangedEvent;
 import com.ecommerce.order.realtime.OrderStatusSseService;
 import com.ecommerce.order.repository.OrderRepository;
 import com.ecommerce.order.service.OrderService;

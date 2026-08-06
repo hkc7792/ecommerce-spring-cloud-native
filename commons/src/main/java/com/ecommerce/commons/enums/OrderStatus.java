@@ -1,4 +1,4 @@
-package com.ecommerce.order.entities;
+package com.ecommerce.commons.enums;
 
 /**
  * Lifecycle states of an order, matching the saga state machine in

@@ -1,5 +1,6 @@
 package com.ecommerce.order.entities;
 
+import com.ecommerce.commons.enums.OrderStatus;
 import jakarta.persistence.*;
 import lombok.*;
 

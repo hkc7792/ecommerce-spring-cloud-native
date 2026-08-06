@@ -1,6 +1,6 @@
-package com.ecommerce.order.events;
+package com.ecommerce.commons.events;
 
-import com.ecommerce.order.entities.OrderStatus;
+import com.ecommerce.commons.enums.OrderStatus;
 
 import java.time.Instant;
 

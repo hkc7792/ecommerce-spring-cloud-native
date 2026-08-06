@@ -1,6 +1,6 @@
 package com.ecommerce.order.dto;
 
-import com.ecommerce.order.entities.OrderStatus;
+import com.ecommerce.commons.enums.OrderStatus;
 
 /**
  * Returned by POST /api/order so the client immediately knows the
