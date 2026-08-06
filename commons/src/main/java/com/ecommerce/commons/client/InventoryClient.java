@@ -18,4 +18,8 @@ public interface InventoryClient {
     // New method to reduce stock after order placement
     @PostExchange("/reduce")
     void reduceStock(@RequestBody List<InventoryRequest> reduceRequests);
+
+    // Restore stock when an order is cancelled (saga compensation)
+    @PostExchange("/add")
+    void addStock(@RequestBody InventoryRequest addRequest);
 }
