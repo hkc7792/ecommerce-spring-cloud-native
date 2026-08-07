@@ -227,6 +227,28 @@ services:
     networks:
       - ecommerce-network
 
+  gateway-service:
+    image: ${DOCKER_USERNAME}/gateway-service:${IMAGE_TAG:-latest}
+    container_name: gateway-service_${IMAGE_TAG:-latest}
+    build:
+      context: .
+      dockerfile: gateway-service/Dockerfile
+    ports:
+      - "8080:8080"
+    depends_on:
+      inventory-service:
+        condition: service_started
+      order-service:
+        condition: service_started
+      payment-service:
+        condition: service_started
+      user-service:
+        condition: service_started
+      notification-service:
+        condition: service_started
+    networks:
+      - ecommerce-network
+
 networks:
   ecommerce-network:
     driver: bridge

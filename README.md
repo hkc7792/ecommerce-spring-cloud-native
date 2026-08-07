@@ -26,10 +26,12 @@ A microservices e-commerce platform with **realtime order tracking, live invento
 
 ```
                         ┌─────────────────────────────┐
-                        │   API Gateway (planned)      │  http://localhost:8080
+                        │    API Gateway              │  http://localhost:8080
+                        │  routes /api/* + /ws        │
                         └──────┬──────┬──────┬─────────┘
         WebSocket/STOMP        │      │      │
-   ws://localhost:8085/ws      │      │      │
+   ws://localhost:8080/ws      │      │      │
+   (direct: 8085)              │      │      │
         ┌──────────────────────┼──────┼──────┼───────────────┐
         ▼                      ▼      ▼      ▼               ▼
 ┌───────────────┐  ┌───────────────┐ ┌─────────────┐ ┌──────────────┐ ┌──────────────────┐
@@ -48,7 +50,7 @@ A microservices e-commerce platform with **realtime order tracking, live invento
 | Topic                     | Payload                                              | Producer            | Consumers                              |
 |---------------------------|------------------------------------------------------|---------------------|----------------------------------------|
 | `notificationTopic`       | `OrderPlaceEvent`                                    | order-service       | payment-service, notification-service  |
-| `paymentTopic`            | `PaymentCompletedEvent` / `PaymentFailedEvent`       | payment-service     | order-service                          |
+| `paymentTopic`            | `PaymentCompletedEvent` / `PaymentFailedEvent` / `PaymentRefundedEvent` | payment-service     | order-service                          |
 | `order-status-updates`    | `OrderStatusChangedEvent`                            | order-service       | notification-service                   |
 | `inventory-stock-events`  | `StockDepletedEvent` / `StockReplenishedEvent`       | inventory-service   | —                                      |
 | `inventory-alerts`        | `LowStockAlertEvent`                                 | inventory-service   | —                                      |
@@ -60,6 +62,7 @@ A microservices e-commerce platform with **realtime order tracking, live invento
 - **Order lifecycle with realtime status** — order moves `PENDING → RESERVED → CONFIRMED → (SHIPPED → DELIVERED)` or `→ CANCELLED`, and every transition is pushed to the customer instantly.
 - **Atomic inventory reservation** — stock is reserved at order placement via a guarded atomic update, preventing overselling during flash sales.
 - **Saga-orchestrated payment** — payment runs as a saga step; success confirms the order, failure cancels it and releases reserved stock (compensating transaction).
+- **Refund flow** — a completed payment can be refunded (`POST /api/payment/{orderNumber}/refund`); the order is cancelled and its stock released via a `PaymentRefundedEvent` compensating transaction.
 - **Live inventory visibility** — stock depletion / replenishment / low-stock alerts stream to browsers in realtime.
 - **Realtime push hub** — order placed + status change events are broadcast over WebSocket (STOMP) to every subscribed client.
 - **User accounts & auth** — registration, JWT login, profile and address management.
@@ -81,6 +84,7 @@ A microservices e-commerce platform with **realtime order tracking, live invento
 
 | Service               | Port (host:container) | Database      | One-line description                                        |
 |-----------------------|-----------------------|---------------|-------------------------------------------------------------|
+| **gateway-service**   | `8080:8080`           | — (none)      | Spring Cloud Gateway — single entry point routing `/api/*` + `/ws` |
 | **order-service**     | `8082:8080`           | order_db :3308| Places orders, reserves stock, tracks the order state machine|
 | **inventory-service** | `8081:8080`           | inventory_db  | Manages stock with atomic reductions + realtime stock SSE   |
 | **payment-service**   | `8083:8080`           | payment_db    | Processes payments (simulated gateway) with retry + DLQ     |
