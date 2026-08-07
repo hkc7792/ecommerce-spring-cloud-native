@@ -36,6 +36,20 @@ public class PaymentController {
     }
 
     /**
+     * Refund a completed payment for an order.
+     * POST /api/payment/{orderNumber}/refund
+     */
+    @PostMapping("/{orderNumber}/refund")
+    @ResponseStatus(HttpStatus.OK)
+    @Operation(summary = "Refund a payment", description = "Refunds a COMPLETED payment for an order and publishes a compensating refund event to cancel the order and release inventory")
+    @ApiResponse(responseCode = "200", description = "Payment refunded successfully")
+    @ApiResponse(responseCode = "404", description = "Payment not found")
+    @ApiResponse(responseCode = "409", description = "Payment is not in a refundable (COMPLETED) state")
+    public PaymentResponse refundPayment(@PathVariable String orderNumber) {
+        return paymentService.refund(orderNumber);
+    }
+
+    /**
      * Get paginated payment history for a customer.
      * GET /api/payment/history?customerId=123&page=0&size=20&status=COMPLETED
      */

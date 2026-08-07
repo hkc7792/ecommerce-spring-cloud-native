@@ -1,4 +1,4 @@
-# Payment Service — API Documentation (Planned)
+# Payment Service — API Documentation
 
 ## Service Overview
 
@@ -10,13 +10,13 @@
 | Package          | `com.ecommerce.payment`                               |
 | Spring Boot      | 3.4.1                                                 |
 | Java             | 21                                                    |
-| Status           | 🔲 **Planned** — Not yet implemented                 |
+| Status           | ✅ **Implemented** — simulated gateway; Razorpay integration planned |
 
 ---
 
 ## Architecture Context
 
-The Payment Service is a critical component in the order fulfillment saga. It consumes `OrderPlaceEvent` messages from Kafka, processes payments through an external gateway (Razorpay/Stripe), and publishes the outcome back to Kafka for the Order Service to act on.
+The Payment Service is a critical component in the order fulfillment saga. It consumes `OrderPlaceEvent` messages from Kafka, processes payments through a **simulated gateway** (a real gateway such as Razorpay/Stripe is planned for production), and publishes the outcome back to `paymentTopic` for the Order Service to act on. Consumption uses `@RetryableTopic` with a dead-letter topic, so a processing failure is never silently dropped.
 
 ```
 Order Service                 Kafka                    Payment Service             Payment Gateway
@@ -41,7 +41,7 @@ Retrieves the payment details for a specific order.
 |-------------|---------------------------------------------------|
 | Method      | `GET`                                              |
 | Path        | `/api/payment/{orderNumber}`                       |
-| Auth        | JWT Bearer token (Customer or Admin)               |
+| Auth        | None (planned: JWT Bearer token)                   |
 | Status      | `200 OK`                                           |
 
 #### Response — 200 OK
@@ -53,8 +53,9 @@ Retrieves the payment details for a specific order.
   "amount": 129997.00,
   "currency": "INR",
   "paymentMethod": "UPI",
-  "gatewayTransactionId": "razorpay_txn_9876543210",
+  "gatewayTransactionId": "gw_txn_9876543210",
   "status": "COMPLETED",
+  "failureReason": null,
   "paidAt": "2026-08-04T12:35:00Z",
   "createdAt": "2026-08-04T12:30:00Z"
 }
@@ -79,16 +80,17 @@ Returns paginated payment history for a customer.
 |-------------|---------------------------------------------------|
 | Method      | `GET`                                              |
 | Path        | `/api/payment/history`                             |
-| Auth        | JWT Bearer token                                   |
+| Auth        | None (planned: JWT Bearer token)                   |
 | Status      | `200 OK`                                           |
 
 #### Query Parameters
 
-| Parameter  | Type      | Required | Default | Description                     |
-|------------|-----------|----------|---------|---------------------------------|
-| `page`     | `Integer` | No       | `0`     | Page number (0-indexed)         |
-| `size`     | `Integer` | No       | `20`    | Items per page                  |
-| `status`   | `String`  | No       | All     | Filter: `COMPLETED`, `FAILED`, `REFUNDED` |
+| Parameter    | Type      | Required | Default | Description                     |
+|--------------|-----------|----------|---------|---------------------------------|
+| `customerId` | `Long`    | Yes      | —       | Customer whose payments to list |
+| `page`       | `Integer` | No       | `0`     | Page number (0-indexed)         |
+| `size`       | `Integer` | No       | `20`    | Items per page                  |
+| `status`     | `String`  | No       | All     | Filter: `COMPLETED`, `FAILED`, `REFUNDED` |
 
 #### Response — 200 OK
 ```json
@@ -97,20 +99,15 @@ Returns paginated payment history for a customer.
     {
       "paymentId": "pay_a1b2c3d4e5f6",
       "orderNumber": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+      "customerId": 12345,
       "amount": 129997.00,
       "currency": "INR",
       "paymentMethod": "UPI",
+      "gatewayTransactionId": "gw_txn_9876543210",
       "status": "COMPLETED",
-      "paidAt": "2026-08-04T12:35:00Z"
-    },
-    {
-      "paymentId": "pay_g7h8i9j0k1l2",
-      "orderNumber": "b2c3d4e5-f6g7-8901-bcde-fg2345678901",
-      "amount": 4999.00,
-      "currency": "INR",
-      "paymentMethod": "CREDIT_CARD",
-      "status": "REFUNDED",
-      "paidAt": "2026-08-03T10:15:00Z"
+      "failureReason": null,
+      "paidAt": "2026-08-04T12:35:00Z",
+      "createdAt": "2026-08-04T12:30:00Z"
     }
   ],
   "page": 0,
@@ -120,58 +117,69 @@ Returns paginated payment history for a customer.
 }
 ```
 
+#### cURL Example
+```bash
+curl "http://localhost:8083/api/payment/history?customerId=12345&page=0&size=20&status=COMPLETED"
+```
+
 ---
 
-### 3. Initiate Refund
+### 3. Refund a Payment
 
-Initiates a full or partial refund for a completed payment.
+Refunds a **completed** (COMPLETED) payment for an order. The payment is marked `REFUNDED` in place, and a `PaymentRefundedEvent` is published to `paymentTopic` so the Order Service cancels the confirmed order and releases the reserved stock (compensating transaction). The simulated gateway means no external refund call is made — a real gateway refund (idempotent on `paymentId`/`gatewayTransactionId`) is the planned production wiring.
 
 | Property    | Value                                             |
 |-------------|---------------------------------------------------|
 | Method      | `POST`                                             |
-| Path        | `/api/payment/refund`                              |
-| Auth        | JWT Bearer token (Admin or System)                 |
-| Status      | `202 Accepted`                                     |
+| Path        | `/api/payment/{orderNumber}/refund`                |
+| Auth        | None (planned: JWT Bearer token)                   |
+| Status      | `200 OK`                                           |
 
-#### Request Body
+#### Path Parameters
+
+| Parameter     | Type     | Description                          |
+|---------------|----------|--------------------------------------|
+| `orderNumber` | `String` | Order whose payment should be refunded |
+
+#### Response — 200 OK
 ```json
 {
+  "paymentId": "pay_a1b2c3d4e5f6",
   "orderNumber": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-  "refundAmount": 24999.00,
-  "reason": "ITEM_RETURNED",
-  "notes": "Customer returned AIRPODS-PRO-2 (damaged packaging)"
+  "customerId": 12345,
+  "amount": 129997.00,
+  "currency": "INR",
+  "paymentMethod": "UPI",
+  "gatewayTransactionId": "gw_txn_9876543210",
+  "status": "REFUNDED",
+  "failureReason": "REFUNDED",
+  "paidAt": "2026-08-04T12:35:00Z",
+  "createdAt": "2026-08-04T12:30:00Z"
 }
 ```
 
-#### Request Schema
-
-| Field          | Type          | Required | Validation                                 |
-|----------------|---------------|----------|--------------------------------------------|
-| `orderNumber`  | `String`      | Yes      | Must match an existing completed payment   |
-| `refundAmount` | `BigDecimal`  | Yes      | Must be > 0 and ≤ original payment amount  |
-| `reason`       | `String`      | Yes      | Enum: `ORDER_CANCELLED`, `ITEM_RETURNED`, `DUPLICATE_CHARGE`, `OTHER` |
-| `notes`        | `String`      | No       | Free-text description (max 500 chars)      |
-
-#### Response — 202 Accepted
+#### Response — 404 Payment Not Found
 ```json
 {
-  "refundId": "rfnd_m3n4o5p6q7r8",
-  "orderNumber": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-  "refundAmount": 24999.00,
-  "status": "PROCESSING",
-  "estimatedCompletionDate": "2026-08-11",
-  "createdAt": "2026-08-04T14:00:00Z"
-}
-```
-
-#### Response — 409 Conflict
-```json
-{
-  "status": 409,
-  "message": "Refund already in progress for order: a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+  "status": 404,
+  "message": "Payment not found for order: a1b2c3d4-e5f6-7890-abcd-ef1234567890",
   "timestamp": "2026-08-04T14:00:00Z"
 }
 ```
+
+#### Response — 409 Conflict (not refundable)
+Only `COMPLETED` payments can be refunded; `PENDING` / `PROCESSING` / `FAILED` / already-`REFUNDED` payments are rejected.
+
+```json
+{
+  "status": 409,
+  "message": "Cannot refund payment for order a1b2c3d4-e5f6-7890-abcd-ef1234567890 in status FAILED; only COMPLETED payments can be refunded",
+  "timestamp": "2026-08-04T14:00:00Z"
+}
+```
+
+#### Side Effect — Compensating Transaction
+The refund is a saga compensating step: payment-service publishes `PaymentRefundedEvent` → order-service transitions the order `CONFIRMED → CANCELLED` and releases the stock reserved at placement.
 
 ---
 
@@ -182,10 +190,10 @@ Initiates a full or partial refund for a completed payment.
 | Column                   | Type          | Constraints            | Description                           |
 |--------------------------|---------------|------------------------|---------------------------------------|
 | `id`                     | `BIGINT`      | PK, AUTO_INCREMENT     | Internal surrogate key                |
-| `payment_id`             | `VARCHAR(20)` | UNIQUE, NOT NULL       | Business ID (e.g., `pay_a1b2c3d4`)   |
+| `payment_id`             | `VARCHAR(30)` | UNIQUE, NOT NULL       | Business ID (e.g., `pay_a1b2c3d4`)   |
 | `order_number`           | `VARCHAR(36)` | NOT NULL, INDEX        | References the associated order       |
 | `customer_id`            | `BIGINT`      | NOT NULL               | Customer who made the payment         |
-| `amount`                 | `DECIMAL`     | NOT NULL               | Payment amount in smallest currency unit |
+| `amount`                 | `DECIMAL(12,2)` | NOT NULL            | Payment amount in smallest currency unit |
 | `currency`               | `VARCHAR(3)`  | NOT NULL, Default: INR | ISO 4217 currency code                |
 | `payment_method`         | `ENUM`        | NOT NULL               | `CREDIT_CARD`, `DEBIT_CARD`, `UPI`, `NET_BANKING`, `WALLET` |
 | `gateway_transaction_id` | `VARCHAR`     | UNIQUE                 | Payment gateway's reference ID        |
@@ -195,7 +203,9 @@ Initiates a full or partial refund for a completed payment.
 | `created_at`             | `TIMESTAMP`   | Auto-generated         | Record creation time                  |
 | `updated_at`             | `TIMESTAMP`   | Auto-updated           | Last modification time                |
 
-### Refund Entity
+### Refund Entity — *Planned*
+
+The current implementation handles full refunds in place: the `Payment` row is flipped to `REFUNDED` (with `failure_reason` = `REFUNDED`) and no separate refund record is kept. A dedicated `Refund` entity is a planned follow-up to support partial refunds and a durable refund audit trail.
 
 | Column                   | Type          | Constraints            | Description                           |
 |--------------------------|---------------|------------------------|---------------------------------------|
@@ -229,9 +239,12 @@ Initiates a full or partial refund for a completed payment.
 ```
 
 **Consumer Group**: `payment-service-group`  
-**Processing**: Extract `orderNumber`, `customerId`, `totalAmount` → call payment gateway → publish result
+**Processing**: Extract `orderNumber`, `customerId`, `totalAmount` → call simulated gateway → publish result  
+**Reliability**: Listener uses `@RetryableTopic` — a processing failure is retried with exponential backoff (1s → 2s → 4s, 4 total attempts) and then dead-lettered to the auto-created `notificationTopic-dlt` for operator review. `enable-auto-commit=false` + `AckMode.RECORD` ensures offsets only advance after a record is processed or safely routed to retry/DLT.
 
 ### Published Events
+
+**Publishing reliability**: every published event (completion / failure / refund) is sent via a small retry helper — 3 attempts with 500ms backoff, blocking on broker acknowledgement (5s timeout). If still failing after 3 attempts the event is logged at ERROR for operator follow-up (an outbox is a planned follow-up).
 
 #### PaymentCompletedEvent (to `paymentTopic`)
 ```json
@@ -241,7 +254,7 @@ Initiates a full or partial refund for a completed payment.
   "customerId": 12345,
   "amount": 129997.00,
   "paymentMethod": "UPI",
-  "gatewayTransactionId": "razorpay_txn_9876543210",
+  "gatewayTransactionId": "gw_txn_9876543210",
   "paidAt": "2026-08-04T12:35:00Z"
 }
 ```
@@ -258,94 +271,93 @@ Initiates a full or partial refund for a completed payment.
 }
 ```
 
-#### RefundProcessedEvent (to `paymentTopic`)
+#### PaymentRefundedEvent (to `paymentTopic`)
+
+Published when a completed payment is refunded (via `POST /api/payment/{orderNumber}/refund`). Consumed by Order Service to cancel the `CONFIRMED` order and release its stock.
+
 ```json
 {
-  "refundId": "rfnd_m3n4o5p6q7r8",
   "paymentId": "pay_a1b2c3d4e5f6",
   "orderNumber": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-  "refundAmount": 24999.00,
-  "status": "COMPLETED",
-  "completedAt": "2026-08-11T09:00:00Z"
+  "customerId": 12345,
+  "amount": 129997.00,
+  "reason": "REFUNDED",
+  "refundedAt": "2026-08-04T14:05:00Z"
 }
 ```
 
 ---
 
-## Payment Gateway Integration (Razorpay)
+## Payment Gateway Integration
 
-### Flow
-1. Receive `OrderPlaceEvent` from Kafka
-2. Look up customer's saved payment method (or use default)
-3. Create a Razorpay `Payment` object with amount, currency, and order reference
-4. Submit to Razorpay API (`POST https://api.razorpay.com/v1/payments`)
-5. Handle response:
-   - **Success**: Save payment record with status `COMPLETED`, publish `PaymentCompletedEvent`
-   - **Failure**: Save with status `FAILED` and `failureReason`, publish `PaymentFailedEvent`
+### Current Implementation (Simulated Gateway)
+1. Receive `OrderPlaceEvent` from Kafka (`notificationTopic`)
+2. Create a `Payment` record with status `PROCESSING`, random payment method
+3. Call `simulatePaymentGateway(amount)` — 200–800ms latency; failure rates are 5% (normal orders) and 20% (orders > ₹100,000)
+4. Handle response:
+   - **Success**: Save with status `COMPLETED` + `gatewayTransactionId`, publish `PaymentCompletedEvent`
+   - **Failure**: Save with status `FAILED` + `failureReason`, publish `PaymentFailedEvent`
+5. On `POST /api/payment/{orderNumber}/refund` for a `COMPLETED` payment: mark the payment `REFUNDED` and publish `PaymentRefundedEvent` (compensating transaction → order cancelled, stock released)
 
-### Idempotency
-- Use `orderNumber` as the idempotency key when calling the gateway
-- If a duplicate event is received (same `orderNumber`), check the database first:
-  - If payment already `COMPLETED` → skip, publish `PaymentCompletedEvent` again
-  - If payment `FAILED` → retry the payment
-
-### Security
+### Planned (Production) — Razorpay
+- Replace the simulation with a real Razorpay API call (`POST https://api.razorpay.com/v1/payments`)
 - API keys stored in environment variables (dev) / Vault (production)
 - No card data stored locally — all card operations delegated to gateway (PCI-DSS compliant)
 - All gateway communication over HTTPS/TLS 1.3
 
+### Idempotency (Implemented)
+- `orderNumber` is the idempotency key — at-least-once Kafka delivery is safe
+- On each event, `paymentRepository.existsByOrderNumber(orderNumber)` is checked first: a duplicate order is skipped (no double-charging)
+
 ---
 
-## Planned Package Structure
+## Package Structure
 
 ```
 com.ecommerce.payment/
 ├── PaymentServiceApplication.java
 ├── config/
-│   ├── KafkaConsumerConfig.java
-│   └── RazorpayConfig.java
+│   └── KafkaConfig.java            (@EnableKafkaRetryTopic + retry scheduler)
 ├── controller/
 │   └── PaymentController.java
 ├── service/
 │   ├── PaymentService.java
 │   └── impl/
-│       ├── PaymentServiceImpl.java
-│       └── RefundServiceImpl.java
+│       └── PaymentServiceImpl.java
 ├── repository/
-│   ├── PaymentRepository.java
-│   └── RefundRepository.java
+│   └── PaymentRepository.java
 ├── entities/
-│   ├── Payment.java
-│   └── Refund.java
+│   └── Payment.java
 ├── dto/
-│   ├── PaymentResponse.java
-│   ├── RefundRequest.java
-│   └── RefundResponse.java
-├── events/
-│   ├── PaymentCompletedEvent.java
-│   ├── PaymentFailedEvent.java
-│   └── RefundProcessedEvent.java
+│   └── PaymentResponse.java
 ├── consumer/
-│   └── OrderEventConsumer.java
-├── gateway/
-│   └── RazorpayGatewayClient.java
+│   └── OrderEventConsumer.java     (@RetryableTopic + @DltHandler)
 └── exceptions/
     ├── PaymentNotFoundException.java
-    ├── RefundException.java
     └── GlobalExceptionHandler.java
 ```
+
+*Planned additions: a `Refund` entity + repository for partial refunds and audit, and a `RazorpayGatewayClient` to replace the simulated gateway (including real gateway refunds).*
 
 ---
 
 ## Configuration
 
-### Docker Ports (Planned)
+### Kafka
+| Property                     | Value                                              |
+|------------------------------|----------------------------------------------------|
+| Bootstrap servers            | `localhost:9092` (dev) / `kafka:29092` (Docker)    |
+| Consumer group               | `payment-service-group`                            |
+| `enable-auto-commit`         | `false` — manual ack, `ack-mode: record`           |
+| Retry / DLT                  | `@RetryableTopic` → `notificationTopic-dlt`        |
+
+### Docker Ports
 | Type             | Host     | Container |
 |------------------|----------|-----------|
 | Application      | `8083`   | `8080`    |
 | Remote Debug     | `5003`   | `5000`    |
 
-### Database (Planned)
+### Database
 | Property                 | Value                                              |
 |--------------------------|----------------------------------------------------|
 | URL                      | `jdbc:mysql://payment_db_container:3306/payment_db` |

@@ -5,6 +5,7 @@ import com.ecommerce.commons.enums.OrderStatus;
 import com.ecommerce.commons.events.OrderStatusChangedEvent;
 import com.ecommerce.commons.events.PaymentCompletedEvent;
 import com.ecommerce.commons.events.PaymentFailedEvent;
+import com.ecommerce.commons.events.PaymentRefundedEvent;
 import com.ecommerce.commons.requests.InventoryRequest;
 import com.ecommerce.order.entities.Order;
 import com.ecommerce.order.entities.OrderLineItems;
@@ -21,7 +22,8 @@ import java.time.Instant;
 /**
  * Consumes payment results from "paymentTopic" and drives the order
  * state machine: RESERVED -> CONFIRMED (payment ok) or
- * RESERVED -> CANCELLED + stock release (payment failed).
+ * RESERVED -> CANCELLED + stock release (payment failed), and
+ * CONFIRMED -> CANCELLED + stock release (payment refunded).
  *
  * A single listener method is used (branching on the concrete type) so
  * this consumer owns the whole group's partitions regardless of the
@@ -45,6 +47,8 @@ public class PaymentEventConsumer {
             handlePaymentCompleted(completed);
         } else if (payload instanceof PaymentFailedEvent failed) {
             handlePaymentFailed(failed);
+        } else if (payload instanceof PaymentRefundedEvent refunded) {
+            handlePaymentRefunded(refunded);
         } else {
             log.warn("Ignoring unknown payload on paymentTopic: {}",
                     payload == null ? "null" : payload.getClass().getName());
@@ -81,6 +85,25 @@ public class PaymentEventConsumer {
         log.warn("Order {} CANCELLED after payment failure: {}", event.orderNumber(), event.failureReason());
 
         // Compensating transaction: restore the stock reserved at placement.
+        releaseStock(order);
+    }
+
+    private void handlePaymentRefunded(PaymentRefundedEvent event) {
+        Order order = findOrder(event.orderNumber());
+        OrderStatus previous = order.getStatus();
+
+        if (previous != OrderStatus.CONFIRMED) {
+            log.warn("Refund received for order {} but current status is {}; expected CONFIRMED, skipping transition",
+                    event.orderNumber(), previous);
+            return;
+        }
+        order.setStatus(OrderStatus.CANCELLED);
+        orderRepository.save(order);
+        publishStatus(order, previous);
+        log.warn("Order {} CANCELLED after refund of payment {}: {}", event.orderNumber(), event.paymentId(), event.reason());
+
+        // Compensating transaction: stock was consumed at placement and never
+        // released (payment had succeeded), so restore it now.
         releaseStock(order);
     }
 

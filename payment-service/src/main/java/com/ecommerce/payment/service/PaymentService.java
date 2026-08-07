@@ -14,6 +14,16 @@ public interface PaymentService {
     void processPayment(OrderPlaceEvent orderPlaceEvent);
 
     /**
+     * Refund a completed payment for an order.
+     * Marks the payment REFUNDED and publishes a {@code PaymentRefundedEvent}
+     * so the order service can cancel the order and release inventory.
+     *
+     * @param orderNumber the order whose payment should be refunded
+     * @return the updated payment details
+     */
+    PaymentResponse refund(String orderNumber);
+
+    /**
      * Get payment details by order number.
      */
     PaymentResponse getPaymentByOrderNumber(String orderNumber);

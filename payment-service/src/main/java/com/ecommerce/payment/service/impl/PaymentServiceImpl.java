@@ -3,6 +3,7 @@ package com.ecommerce.payment.service.impl;
 import com.ecommerce.commons.events.OrderPlaceEvent;
 import com.ecommerce.commons.events.PaymentCompletedEvent;
 import com.ecommerce.commons.events.PaymentFailedEvent;
+import com.ecommerce.commons.events.PaymentRefundedEvent;
 import com.ecommerce.payment.dto.PaymentResponse;
 import com.ecommerce.payment.entities.Payment;
 import com.ecommerce.payment.entities.Payment.PaymentMethod;
@@ -104,6 +105,42 @@ public class PaymentServiceImpl implements PaymentService {
     }
 
     @Override
+    @Transactional
+    public PaymentResponse refund(String orderNumber) {
+        Payment payment = paymentRepository.findByOrderNumber(orderNumber)
+                .orElseThrow(() -> new PaymentNotFoundException(
+                        "Payment not found for order: " + orderNumber));
+
+        if (payment.getStatus() != PaymentStatus.COMPLETED) {
+            throw new IllegalStateException(
+                    "Cannot refund payment for order " + orderNumber
+                            + " in status " + payment.getStatus()
+                            + "; only COMPLETED payments can be refunded");
+        }
+
+        // Simulated gateway refund: no external call — just mark REFUNDED
+        // (consistent with the simulated processPayment). A real gateway refund,
+        // idempotent on paymentId/gatewayTransactionId, would be wired here before
+        // flipping the local status.
+        payment.setStatus(PaymentStatus.REFUNDED);
+        payment.setFailureReason("REFUNDED");
+        paymentRepository.save(payment);
+
+        log.info("Payment {} for order {} REFUNDED — amount: ₹{}",
+                payment.getPaymentId(), orderNumber, payment.getAmount());
+
+        // Publish compensating transaction event so order-service can cancel
+        // the order and release the stock consumed at placement.
+        PaymentRefundedEvent event = new PaymentRefundedEvent(
+                payment.getPaymentId(), orderNumber, payment.getCustomerId(),
+                payment.getAmount(), "REFUNDED", Instant.now()
+        );
+        publishPaymentEvent(PAYMENT_TOPIC, orderNumber, event);
+
+        return mapToResponse(payment);
+    }
+
+    @Override
     @Transactional(readOnly = true)
     public PaymentResponse getPaymentByOrderNumber(String orderNumber) {
         Payment payment = paymentRepository.findByOrderNumber(orderNumber)
@@ -136,7 +173,7 @@ public class PaymentServiceImpl implements PaymentService {
      *
      * @param topic       the Kafka topic to publish to
      * @param orderNumber the order number used as the message key
-     * @param event       the event to publish (PaymentCompletedEvent / PaymentFailedEvent)
+     * @param event       the event to publish (PaymentCompletedEvent / PaymentFailedEvent / PaymentRefundedEvent)
      */
     private void publishPaymentEvent(String topic, String orderNumber, Object event) {
         final int maxAttempts = 3;
