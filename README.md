@@ -140,3 +140,4 @@ curl -X POST http://localhost:8082/api/order -H "Content-Type: application/json"
 | [API: User](docs/api/user-service.md)                 | Auth + profile endpoints                 |
 | [BRD](docs/requirements/brd-ecommerce.md)             | Business requirements                    |
 | [User Stories](docs/requirements/user-stories.md)     | Story-by-story acceptance criteria       |
+| [End-to-End Testing](docs/testing/end-to-end-testing.md) | Flow-by-flow runnable manual + reliability drills |
