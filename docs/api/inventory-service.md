@@ -140,7 +140,7 @@ curl -X POST http://localhost:8081/api/inventory/add \
 
 ### 3. Reduce Stock
 
-Atomically reduces stock for one or more SKUs. This endpoint is called by the Order Service after an order is placed to deduct purchased quantities. The operation is **all-or-nothing** — if any item has insufficient stock, the entire batch rolls back.
+Atomically reduces stock for one or more SKUs. This endpoint is called by the Order Service after an order is placed to deduct purchased quantities. Each SKU is decremented via a single atomic `UPDATE ... WHERE quantity >= :qty` — the quantity guard makes overselling impossible under concurrent flash-sale requests. The operation is **all-or-nothing** — if any item is missing or has insufficient stock, the entire batch rolls back.
 
 | Property    | Value                                             |
 |-------------|---------------------------------------------------|
@@ -199,15 +199,17 @@ Atomically reduces stock for one or more SKUs. This endpoint is called by the Or
 │  @Transactional(rollbackFor = Exception.class)                   │
 │                                                                    │
 │  FOR EACH item in request:                                        │
-│    1. Find inventory by skuCode → throw if not found             │
-│    2. Check quantity >= requested → throw if insufficient         │
-│    3. Deduct quantity                                              │
-│    4. Update status: qty > 0 → "IN_STOCK" | qty = 0 → "OUT_OF_STOCK" │
-│    5. Save inventory                                               │
+│    1. Atomic UPDATE: quantity = quantity - :qty,                  │
+│       status = "IN_STOCK" | "OUT_OF_STOCK"                        │
+│       WHERE skuCode = :skuCode AND quantity >= :qty               │
+│    2. affectedRows == 0 → throw "Item not found / Insufficient stock"│
+│    3. On success → publish stock events + SSE push                │
 │                                                                    │
 │  ANY exception → ROLLBACK entire batch (no partial deductions)   │
 └──────────────────────────────────────────────────────────────────┘
 ```
+
+The single `reduceStockAtomic` JPQL statement (`UPDATE Inventory SET quantity = quantity - :qty ... WHERE skuCode = :skuCode AND quantity >= :qty`) is the key to correctness — the `quantity >= :qty` predicate means concurrent requests can never push stock below zero.
 
 #### cURL Example
 ```bash
@@ -218,6 +220,78 @@ curl -X POST http://localhost:8081/api/inventory/reduce \
     { "skuCode": "AIRPODS-PRO-2", "quantity": 2 }
   ]'
 ```
+
+---
+
+### 4. Subscribe to Stock Events (SSE)
+
+Real-time stream of stock changes. The frontend opens an EventSource here and receives a `stock-update` event whenever stock is reduced or added. The channel is global (not per-customer) because inventory events are not scoped to a single user.
+
+| Property    | Value                                             |
+|-------------|---------------------------------------------------|
+| Method      | `GET`                                              |
+| Path        | `/api/inventory/events`                            |
+| Auth        | None (planned: service-to-service auth)            |
+| Status      | `200 OK`                                           |
+| Content-Type| `text/event-stream`                                |
+
+#### Event Name
+
+| Event         | Payload                               | Fired When                          |
+|---------------|---------------------------------------|-------------------------------------|
+| `connected`   | `subscribed`                          | Connection established (heartbeat)  |
+| `stock-update`| `StockDepletedEvent` / `StockReplenishedEvent` / `LowStockAlertEvent` | Any stock mutation |
+
+#### cURL Example
+```bash
+curl -N http://localhost:8081/api/inventory/events
+```
+
+---
+
+## Kafka Events
+
+### StockDepletedEvent (Published)
+
+**Topic**: `inventory-stock-events`  
+Published when a SKU's quantity reaches 0.
+
+```json
+{
+  "skuCode": "IPHONE-15-128GB",
+  "quantityAfter": 0,
+  "timestamp": "2026-08-04T12:30:00Z"
+}
+```
+
+### StockReplenishedEvent (Published)
+
+**Topic**: `inventory-stock-events`  
+Published when stock is added for a SKU (new or existing record).
+
+```json
+{
+  "skuCode": "AIRPODS-PRO-2",
+  "quantityAfter": 250,
+  "timestamp": "2026-08-04T12:30:00Z"
+}
+```
+
+### LowStockAlertEvent (Published)
+
+**Topic**: `inventory-alerts`  
+Published when a SKU's quantity drops below the low-stock threshold (configurable, default 10).
+
+```json
+{
+  "skuCode": "MACBOOK-AIR-M3-256GB",
+  "currentQuantity": 8,
+  "threshold": 10,
+  "timestamp": "2026-08-04T12:30:00Z"
+}
+```
+
+All three events are also pushed in realtime to open SSE subscribers (event name `stock-update`) in addition to being published to Kafka.
 
 ---
 
@@ -256,11 +330,14 @@ public interface InventoryClient {
 
     @PostExchange("/reduce")
     void reduceStock(@RequestBody List<InventoryRequest> reduceRequests);
+
+    @PostExchange("/add")
+    void addStock(@RequestBody InventoryRequest addRequest);
 }
 ```
 
 ### Usage (from Order Service)
-The `InventoryClient` is injected into `OrderServiceImpl` and used for synchronous stock validation and reduction during order placement.
+The `InventoryClient` is injected into `OrderServiceImpl` and used for synchronous stock validation and reduction during order placement. `addStock` is used as the saga compensation — it restores stock when a payment failure cancels an order.
 
 ---
 
@@ -300,3 +377,15 @@ curl "http://localhost:8081/api/inventory/items?skuCode=IPHONE-15-128GB&skuCode=
 | Driver                   | `com.mysql.cj.jdbc.Driver`                    |
 | Dialect                  | `org.hibernate.dialect.MySQLDialect`          |
 | Credentials              | `scott` / `tiger` (dev only)                  |
+
+### Kafka
+| Property                 | Value                                              |
+|--------------------------|----------------------------------------------------|
+| Bootstrap servers        | `localhost:9092` (dev) / `kafka:29092` (Docker)    |
+| Producer serialization   | JSON (`JsonSerializer`, String keys)               |
+| Topics                   | `inventory-stock-events`, `inventory-alerts`       |
+
+### Realtime / Threshold
+| Property                       | Value                                          |
+|--------------------------------|------------------------------------------------|
+| `inventory.low-stock-threshold`| `10` (default) — triggers `LowStockAlertEvent` |

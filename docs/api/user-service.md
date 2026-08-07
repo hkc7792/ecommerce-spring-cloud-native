@@ -10,7 +10,7 @@
 | Package          | `com.ecommerce.user`                                  |
 | Spring Boot      | 3.4.1                                                 |
 | Java             | 21                                                    |
-| Status           | 🔲 **Planned** — Not yet implemented                 |
+| Status           | ✅ **Implemented** — register, login, profile, addresses |
 
 ---
 
@@ -41,12 +41,12 @@ The User Service is the identity and access management backbone of the platform.
 
 ### 1. Register New User
 
-Creates a new customer account with email verification.
+Creates a new customer account.
 
 | Property    | Value                                             |
 |-------------|---------------------------------------------------|
 | Method      | `POST`                                             |
-| Path        | `/api/user/register`                               |
+| Path        | `/api/auth/register`                               |
 | Auth        | None (public)                                      |
 | Status      | `201 Created`                                      |
 
@@ -70,15 +70,8 @@ Creates a new customer account with email verification.
 | `password` | `String` | Yes      | Min 8 chars, 1 uppercase, 1 lowercase, 1 digit  |
 
 #### Response — 201 Created
-```json
-{
-  "userId": 1001,
-  "fullName": "Rahul Sharma",
-  "email": "rahul.sharma@gmail.com",
-  "phone": "9876543210",
-  "status": "PENDING_VERIFICATION",
-  "createdAt": "2026-08-04T12:30:00Z"
-}
+```
+User registered successfully
 ```
 
 #### Response — 409 Conflict
@@ -94,12 +87,12 @@ Creates a new customer account with email verification.
 
 ### 2. User Login
 
-Authenticates a user and returns JWT tokens.
+Authenticates a user and returns a JWT token.
 
 | Property    | Value                                             |
 |-------------|---------------------------------------------------|
 | Method      | `POST`                                             |
-| Path        | `/api/user/login`                                  |
+| Path        | `/api/auth/login`                                  |
 | Auth        | None (public)                                      |
 | Status      | `200 OK`                                           |
 
@@ -114,16 +107,12 @@ Authenticates a user and returns JWT tokens.
 #### Response — 200 OK
 ```json
 {
-  "accessToken": "eyJhbGciOiJSUzI1NiIs...",
-  "refreshToken": "dGhpcyBpcyBhIHJlZnJlc2g...",
-  "tokenType": "Bearer",
-  "expiresIn": 86400,
-  "user": {
-    "userId": 1001,
-    "fullName": "Rahul Sharma",
-    "email": "rahul.sharma@gmail.com",
-    "role": "CUSTOMER"
-  }
+  "token": "eyJhbGciOiJSUzI1NiIs...",
+  "type": "Bearer",
+  "userId": 1001,
+  "email": "rahul.sharma@gmail.com",
+  "fullName": "Rahul Sharma",
+  "role": "CUSTOMER"
 }
 ```
 
@@ -169,7 +158,7 @@ Returns the authenticated user's profile information.
   "status": "ACTIVE",
   "addresses": [
     {
-      "addressId": 1,
+      "id": 1,
       "label": "HOME",
       "street": "42, MG Road, Indiranagar",
       "city": "Bengaluru",
@@ -179,7 +168,7 @@ Returns the authenticated user's profile information.
       "isDefault": true
     },
     {
-      "addressId": 2,
+      "id": 2,
       "label": "OFFICE",
       "street": "WeWork Galaxy, Residency Road",
       "city": "Bengaluru",
@@ -188,15 +177,15 @@ Returns the authenticated user's profile information.
       "phone": "9876543211",
       "isDefault": false
     }
-  ],
-  "createdAt": "2026-08-04T12:30:00Z",
-  "lastLoginAt": "2026-08-04T18:00:00Z"
+  ]
 }
 ```
 
 ---
 
-### 4. Update User Profile
+### 4. Update User Profile — *Planned*
+
+> **Status**: Not yet implemented. Only `GET /api/user/profile` exists today.
 
 Updates the authenticated user's profile fields.
 
@@ -273,7 +262,7 @@ Updates the authenticated user's profile fields.
 }
 ```
 
-#### 5b. Update Address
+#### 5b. Update Address — *Planned*
 
 | Property    | Value                                             |
 |-------------|---------------------------------------------------|
@@ -282,7 +271,7 @@ Updates the authenticated user's profile fields.
 | Auth        | JWT Bearer token                                   |
 | Status      | `200 OK`                                           |
 
-#### 5c. Delete Address
+#### 5c. Delete Address — *Planned*
 
 | Property    | Value                                             |
 |-------------|---------------------------------------------------|
@@ -293,7 +282,7 @@ Updates the authenticated user's profile fields.
 
 ---
 
-### 6. Password Reset
+### 6. Password Reset — *Planned*
 
 #### 6a. Request OTP
 
@@ -357,7 +346,7 @@ Updates the authenticated user's profile fields.
 
 ---
 
-### 7. Refresh Token
+### 7. Refresh Token — *Planned*
 
 | Property    | Value                                             |
 |-------------|---------------------------------------------------|
@@ -426,21 +415,20 @@ Updates the authenticated user's profile fields.
 ### Access Token (JWT)
 | Claim       | Value                                  | Description                    |
 |-------------|----------------------------------------|--------------------------------|
-| `sub`       | `1001`                                 | User ID                       |
-| `email`     | `rahul.sharma@gmail.com`               | User email                    |
+| `sub`       | `rahul.sharma@gmail.com`               | Subject = user email           |
+| `userId`    | `1001`                                 | User ID                       |
 | `role`      | `CUSTOMER`                             | User role for authorization   |
 | `iat`       | `1722772200`                           | Issued at (epoch seconds)     |
 | `exp`       | `1722858600`                           | Expires at (24h after iat)    |
-| `iss`       | `shopease-user-service`                | Issuer                        |
 
 ### Token Configuration
 | Property            | Value              |
 |---------------------|--------------------|
-| Algorithm           | RS256 (RSA)        |
-| Access token TTL    | 24 hours           |
-| Refresh token TTL   | 7 days             |
-| Key rotation        | Every 90 days      |
-| Token storage       | HttpOnly cookie (web) / Secure storage (mobile) |
+| Algorithm           | HS256 (HMAC-SHA256)|
+| Signing key         | `jwt.secret` (env `JWT_SECRET`) |
+| Access token TTL    | 24 hours (`jwt.expiration-ms`)  |
+| Refresh token       | Not yet implemented (planned)   |
+| Token storage       | `Authorization: Bearer` header  |
 
 ---
 
@@ -458,26 +446,20 @@ Updates the authenticated user's profile fields.
 
 ---
 
-## Planned Package Structure
+## Package Structure
 
 ```
 com.ecommerce.user/
 ├── UserServiceApplication.java
-├── config/
-│   ├── SecurityConfig.java
-│   ├── JwtConfig.java
-│   └── WebMvcConfig.java
 ├── controller/
-│   ├── AuthController.java
-│   ├── UserController.java
-│   └── AddressController.java
+│   ├── AuthController.java          (POST /api/auth/register, POST /api/auth/login)
+│   └── UserController.java          (GET /api/user/profile, POST /api/user/addresses)
 ├── service/
-│   ├── UserService.java
 │   ├── AuthService.java
+│   ├── UserService.java
 │   └── impl/
-│       ├── UserServiceImpl.java
 │       ├── AuthServiceImpl.java
-│       └── OtpServiceImpl.java
+│       └── UserServiceImpl.java
 ├── repository/
 │   ├── UserRepository.java
 │   └── AddressRepository.java
@@ -489,31 +471,30 @@ com.ecommerce.user/
 │   ├── LoginRequest.java
 │   ├── LoginResponse.java
 │   ├── UserProfileResponse.java
-│   ├── AddressRequest.java
-│   ├── PasswordResetRequest.java
-│   └── TokenRefreshRequest.java
+│   └── AddressRequest.java
 ├── security/
 │   ├── JwtTokenProvider.java
 │   ├── JwtAuthenticationFilter.java
-│   └── UserDetailsServiceImpl.java
+│   └── SecurityConfig.java
 └── exceptions/
     ├── UserNotFoundException.java
-    ├── AccountLockedException.java
     ├── DuplicateEmailException.java
     └── GlobalExceptionHandler.java
 ```
+
+*Planned additions: password reset / OTP flow, refresh tokens, profile update, address update/delete.*
 
 ---
 
 ## Configuration
 
-### Docker Ports (Planned)
+### Docker Ports
 | Type             | Host     | Container |
 |------------------|----------|-----------|
 | Application      | `8084`   | `8080`    |
 | Remote Debug     | `5004`   | `5000`    |
 
-### Database (Planned)
+### Database
 | Property                 | Value                                          |
 |--------------------------|------------------------------------------------|
 | URL                      | `jdbc:mysql://user_db_container:3306/user_db`   |
