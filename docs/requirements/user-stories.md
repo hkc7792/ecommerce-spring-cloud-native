@@ -19,12 +19,13 @@ Acceptance criteria use the Given-When-Then (GWT) structure.
 - **Then** my account is created, I receive a verification email, and I am redirected to the login page
 
 **Technical Notes:**
-- POST `/api/user/register`
-- Password stored as BCrypt hash (strength 12)
+- POST `/api/auth/register`
+- Password stored as BCrypt hash (`BCryptPasswordEncoder`)
 - Email uniqueness enforced at DB level
 
 **Story Points:** 5  
-**Priority:** Must Have
+**Priority:** Must Have  
+**Status:** ◑ Partially implemented — registration works; email verification is not implemented
 
 ---
 
@@ -39,7 +40,8 @@ Acceptance criteria use the Given-When-Then (GWT) structure.
 - **And** after 5 consecutive failed attempts, the account is locked for 30 minutes
 
 **Story Points:** 5  
-**Priority:** Must Have
+**Priority:** Must Have  
+**Status:** ◑ Partially implemented — 24h JWT issued; refresh token and 5-attempt lockout are not implemented
 
 ---
 
@@ -54,7 +56,8 @@ Acceptance criteria use the Given-When-Then (GWT) structure.
 - **And** I can have a maximum of 5 saved addresses
 
 **Story Points:** 3  
-**Priority:** Must Have
+**Priority:** Must Have  
+**Status:** ◑ Partially implemented — add address (max 5, `isDefault`) works; edit/delete/set-default endpoints are not implemented
 
 ---
 
@@ -68,7 +71,8 @@ Acceptance criteria use the Given-When-Then (GWT) structure.
 - **And** expired or invalid OTPs return a 400 error
 
 **Story Points:** 5  
-**Priority:** Must Have
+**Priority:** Must Have  
+**Status:** ⬜ Not implemented (future scope)
 
 ---
 
@@ -89,7 +93,8 @@ Acceptance criteria use the Given-When-Then (GWT) structure.
 - **Already implemented** in `InventoryController.isInStock()`
 
 **Story Points:** 3  
-**Priority:** Must Have ✅ Implemented
+**Priority:** Must Have  
+**Status:** ✅ Implemented
 
 ---
 
@@ -109,7 +114,8 @@ Acceptance criteria use the Given-When-Then (GWT) structure.
 - **Already implemented** in `InventoryServiceImpl.addInventory()`
 
 **Story Points:** 3  
-**Priority:** Must Have ✅ Implemented
+**Priority:** Must Have  
+**Status:** ✅ Implemented
 
 ---
 
@@ -130,7 +136,8 @@ Acceptance criteria use the Given-When-Then (GWT) structure.
 - **Already implemented** in `InventoryServiceImpl.reduceStock()`
 
 **Story Points:** 5  
-**Priority:** Must Have ✅ Implemented
+**Priority:** Must Have  
+**Status:** ✅ Implemented
 
 ---
 
@@ -144,7 +151,8 @@ Acceptance criteria use the Given-When-Then (GWT) structure.
 - **And** the event includes: SKU code, current quantity, threshold, timestamp
 
 **Story Points:** 3  
-**Priority:** Should Have
+**Priority:** Should Have  
+**Status:** ✅ Implemented
 
 ---
 
@@ -175,7 +183,8 @@ Acceptance criteria use the Given-When-Then (GWT) structure.
 - **Already implemented** in `OrderController.placeOrder()`
 
 **Story Points:** 8  
-**Priority:** Must Have ✅ Implemented
+**Priority:** Must Have  
+**Status:** ✅ Implemented
 
 ---
 
@@ -195,7 +204,8 @@ Acceptance criteria use the Given-When-Then (GWT) structure.
 - **Already implemented** in `OutboxService` and `OutboxRelayWorker`
 
 **Story Points:** 8  
-**Priority:** Must Have ✅ Implemented
+**Priority:** Must Have  
+**Status:** ✅ Implemented
 
 ---
 
@@ -210,7 +220,8 @@ Acceptance criteria use the Given-When-Then (GWT) structure.
 - **And** I can filter by status (PENDING, CONFIRMED, SHIPPED, DELIVERED, CANCELLED)
 
 **Story Points:** 5  
-**Priority:** Must Have
+**Priority:** Must Have  
+**Status:** ⬜ Not implemented (future scope) — repository query exists, no API endpoint
 
 ---
 
@@ -227,7 +238,8 @@ Acceptance criteria use the Given-When-Then (GWT) structure.
 - **Then** the cancellation is rejected with message "Order cannot be cancelled in current state"
 
 **Story Points:** 5  
-**Priority:** Must Have
+**Priority:** Must Have  
+**Status:** ⬜ Not implemented (future scope)
 
 ---
 
@@ -245,7 +257,8 @@ Acceptance criteria use the Given-When-Then (GWT) structure.
 - **And** the order service marks the order as CANCELLED and releases inventory
 
 **Story Points:** 13  
-**Priority:** Must Have
+**Priority:** Must Have  
+**Status:** ✅ Implemented (simulated gateway)
 
 ---
 
@@ -260,7 +273,8 @@ Acceptance criteria use the Given-When-Then (GWT) structure.
 - **And** the refund transaction is logged with reference ID, amount, and status
 
 **Story Points:** 8  
-**Priority:** Must Have
+**Priority:** Must Have  
+**Status:** ◑ Partially implemented — full refund + `PaymentRefundedEvent` (order cancelled, stock released); 5–7 business-day settlement and a distinct `RefundProcessedEvent` are not implemented
 
 ---
 
@@ -274,7 +288,8 @@ Acceptance criteria use the Given-When-Then (GWT) structure.
 - **And** I can download a receipt for each successful payment (PDF)
 
 **Story Points:** 5  
-**Priority:** Should Have
+**Priority:** Should Have  
+**Status:** ◑ Partially implemented — payment history list works; PDF receipt download is not implemented
 
 ---
 
@@ -289,7 +304,8 @@ Acceptance criteria use the Given-When-Then (GWT) structure.
 - **Then** an email is sent to the customer's registered email with: order number, items, total amount, estimated delivery date
 
 **Story Points:** 5  
-**Priority:** Must Have
+**Priority:** Must Have  
+**Status:** ⬜ Not implemented (future scope) — only realtime WebSocket/SSE push today
 
 ---
 
@@ -303,20 +319,24 @@ Acceptance criteria use the Given-When-Then (GWT) structure.
 - **Then** a notification is sent with delivery confirmation and feedback request link
 
 **Story Points:** 5  
-**Priority:** Should Have
+**Priority:** Should Have  
+**Status:** ⬜ Not implemented (future scope)
 
 ---
 
 ## Story Map Summary
 
-| Epic                  | Must Have | Should Have | Nice to Have | Total |
-|-----------------------|-----------|-------------|--------------|-------|
-| User Management       | 4         | 0           | 2            | 6     |
-| Inventory Management  | 3 ✅      | 2           | 1            | 6     |
-| Order Placement       | 3 (2 ✅) | 1           | 0            | 4     |
-| Payment Processing    | 2         | 1           | 0            | 3     |
-| Notifications         | 1         | 1           | 0            | 2     |
-| **Total**             | **13**    | **5**       | **3**        | **21** |
+> Counts reflect the **written stories only** (17 total). BRD-only requirements (e.g. UM-006/007/008,
+> INV-008/009/010, PAY-005/008/009) are tracked via the status column in the BRD, not here.
+
+| Epic                  | Stories | Must Have | Should Have | ✅ Full | ◑ Partial | ⬜ Future |
+|-----------------------|---------|-----------|-------------|---------|-----------|----------|
+| User Management       | US-101…104 | 4     | 0           | 0       | 3 (101, 102, 103) | 1 (104) |
+| Inventory Management  | US-201…204 | 3     | 1           | 4       | 0         | 0        |
+| Order Placement       | US-301…304 | 4     | 0           | 2       | 0         | 2 (303, 304) |
+| Payment Processing    | US-401…403 | 2     | 1           | 1       | 2 (402, 403) | 0     |
+| Notifications         | US-501, 502 | 1    | 1           | 0       | 0         | 2 (501, 502) |
+| **Total**             | **17**    | **14**    | **3**    | **7**   | **5**      | **5**  |
 
 ---
 

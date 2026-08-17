@@ -60,64 +60,67 @@ A distributed, event-driven platform where:
 
 ## 4. Functional Requirements
 
+> **Status legend:** ✅ implemented · ◑ partially implemented · ⬜ not implemented (future scope).
+> Verified against source code on 2026-08-09 — see [Implementation Status](../implementation-status.md).
+
 ### 4.1 User Management (user-service)
 
-| ID       | Requirement                                                                    | Priority  |
-|----------|--------------------------------------------------------------------------------|-----------|
-| UM-001   | Users can register with email, phone number, and password                      | Must Have |
-| UM-002   | Users can log in and receive a JWT token valid for 24 hours                    | Must Have |
-| UM-003   | Users can manage multiple shipping addresses (add, edit, delete, set default)  | Must Have |
-| UM-004   | Users can update profile information (name, phone, email)                      | Must Have |
-| UM-005   | Password reset via email OTP with 10-minute expiry                             | Must Have |
-| UM-006   | Social login (Google, Facebook) as alternative authentication                  | Nice to Have |
-| UM-007   | Admin users can view/search/disable customer accounts                          | Must Have |
-| UM-008   | User preferences (language, currency, notification channels) are persisted     | Nice to Have |
+| ID       | Requirement                                                                    | Priority  | Status |
+|----------|--------------------------------------------------------------------------------|-----------|--------|
+| UM-001   | Users can register with email, phone number, and password                      | Must Have | ✅ |
+| UM-002   | Users can log in and receive a JWT token valid for 24 hours                    | Must Have | ✅ |
+| UM-003   | Users can manage multiple shipping addresses (add, edit, delete, set default)  | Must Have | ◑ add only |
+| UM-004   | Users can update profile information (name, phone, email)                      | Must Have | ◑ read only |
+| UM-005   | Password reset via email OTP with 10-minute expiry                             | Must Have | ⬜ |
+| UM-006   | Social login (Google, Facebook) as alternative authentication                  | Nice to Have | ⬜ |
+| UM-007   | Admin users can view/search/disable customer accounts                          | Must Have | ⬜ |
+| UM-008   | User preferences (language, currency, notification channels) are persisted     | Nice to Have | ⬜ |
 
 ### 4.2 Product Catalog & Inventory (inventory-service)
 
-| ID       | Requirement                                                                    | Priority  |
-|----------|--------------------------------------------------------------------------------|-----------|
-| INV-001  | Each product variant is tracked by a unique SKU code                           | Must Have |
-| INV-002  | Real-time stock quantity is maintained per SKU                                 | Must Have |
-| INV-003  | Stock status auto-updates: `IN_STOCK` (qty > 0) / `OUT_OF_STOCK` (qty = 0)  | Must Have |
-| INV-004  | Bulk stock check: given a list of SKUs, return availability for each           | Must Have |
-| INV-005  | Stock addition: add quantity to existing SKU or create new SKU entry           | Must Have |
-| INV-006  | Stock reduction: atomically deduct quantity; reject if insufficient            | Must Have |
-| INV-007  | Low-stock alerts when quantity falls below configurable threshold              | Should Have |
-| INV-008  | Stock reservation: temporarily hold stock during checkout (TTL: 15 minutes)   | Should Have |
-| INV-009  | Stock history log: audit trail of all add/reduce operations with timestamp     | Should Have |
-| INV-010  | Warehouse-level stock tracking (multi-warehouse support)                       | Nice to Have |
+| ID       | Requirement                                                                    | Priority  | Status |
+|----------|--------------------------------------------------------------------------------|-----------|--------|
+| INV-001  | Each product variant is tracked by a unique SKU code                           | Must Have | ✅ |
+| INV-002  | Real-time stock quantity is maintained per SKU                                 | Must Have | ✅ |
+| INV-003  | Stock status auto-updates: `IN_STOCK` (qty > 0) / `OUT_OF_STOCK` (qty = 0)  | Must Have | ✅ |
+| INV-004  | Bulk stock check: given a list of SKUs, return availability for each           | Must Have | ✅ |
+| INV-005  | Stock addition: add quantity to existing SKU or create new SKU entry           | Must Have | ✅ |
+| INV-006  | Stock reduction: atomically deduct quantity; reject if insufficient            | Must Have | ✅ |
+| INV-007  | Low-stock alerts when quantity falls below configurable threshold              | Should Have | ✅ |
+| INV-008  | Stock reservation: temporarily hold stock during checkout (TTL: 15 minutes)   | Should Have | ⬜ |
+| INV-009  | Stock history log: audit trail of all add/reduce operations with timestamp     | Should Have | ⬜ |
+| INV-010  | Warehouse-level stock tracking (multi-warehouse support)                       | Nice to Have | ⬜ |
 
 ### 4.3 Order Management (order-service)
 
-| ID       | Requirement                                                                    | Priority  |
-|----------|--------------------------------------------------------------------------------|-----------|
-| ORD-001  | Customers can place orders with one or more line items                         | Must Have |
-| ORD-002  | Each order receives a unique, system-generated order number (UUID)             | Must Have |
-| ORD-003  | Order must validate: customer ID > 0, at least 1 line item, price > 0, qty > 0| Must Have |
-| ORD-004  | Order total is calculated as sum of (price × quantity) for all line items      | Must Have |
-| ORD-005  | Upon placement, an `OrderPlaceEvent` is published to Kafka for downstream processing | Must Have |
-| ORD-006  | If Kafka is unavailable, events are saved to an Outbox table and retried      | Must Have |
-| ORD-007  | Order status tracks full lifecycle: PENDING → RESERVED → CONFIRMED → SHIPPED → DELIVERED | Should Have |
-| ORD-008  | Customers can view order history filtered by date range and status             | Must Have |
-| ORD-009  | Customers can cancel orders in PENDING or RESERVED status                      | Must Have |
-| ORD-010  | Order cancellation triggers compensating transactions (release stock, refund)  | Should Have |
-| ORD-011  | Admin dashboard: view all orders, filter by status/date/customer               | Should Have |
+| ID       | Requirement                                                                    | Priority  | Status |
+|----------|--------------------------------------------------------------------------------|-----------|--------|
+| ORD-001  | Customers can place orders with one or more line items                         | Must Have | ✅ |
+| ORD-002  | Each order receives a unique, system-generated order number (UUID)             | Must Have | ✅ |
+| ORD-003  | Order must validate: customer ID > 0, at least 1 line item, price > 0, qty > 0| Must Have | ✅ |
+| ORD-004  | Order total is calculated as sum of (price × quantity) for all line items      | Must Have | ✅ |
+| ORD-005  | Upon placement, an `OrderPlaceEvent` is published to Kafka for downstream processing | Must Have | ✅ |
+| ORD-006  | If Kafka is unavailable, events are saved to an Outbox table and retried      | Must Have | ✅ |
+| ORD-007  | Order status tracks full lifecycle: PENDING → RESERVED → CONFIRMED → SHIPPED → DELIVERED | Should Have | ◑ SHIPPED/DELIVERED pending |
+| ORD-008  | Customers can view order history filtered by date range and status             | Must Have | ⬜ |
+| ORD-009  | Customers can cancel orders in PENDING or RESERVED status                      | Must Have | ⬜ |
+| ORD-010  | Order cancellation triggers compensating transactions (release stock, refund)  | Should Have | ◑ compensation wired on payment-fail/refund; no cancel endpoint |
+| ORD-011  | Admin dashboard: view all orders, filter by status/date/customer               | Should Have | ⬜ |
 
 ### 4.4 Payment Processing (payment-service)
 
-| ID       | Requirement                                                                    | Priority  |
-|----------|--------------------------------------------------------------------------------|-----------|
-| PAY-001  | Support multiple payment methods: Credit Card, Debit Card, UPI, Net Banking, Wallet | Must Have |
-| PAY-002  | Process payment upon receiving `OrderPlaceEvent` from Kafka                   | Must Have |
-| PAY-003  | Publish `PaymentCompletedEvent` or `PaymentFailedEvent` after processing      | Must Have |
-| PAY-004  | Full refund for cancelled orders within 7 days                                 | Must Have |
-| PAY-005  | Partial refund for returned items                                              | Should Have |
-| PAY-006  | Payment transaction log with gateway reference ID, amount, status, timestamp  | Must Have |
-| PAY-007  | Retry failed payments up to 3 times with exponential backoff                   | Must Have |
-| PAY-008  | Generate GST-compliant invoices for each successful payment                    | Should Have |
-| PAY-009  | Daily settlement reports for finance reconciliation                            | Should Have |
-| PAY-010  | PCI-DSS compliance: no card data stored; delegate to payment gateway           | Must Have |
+| ID       | Requirement                                                                    | Priority  | Status |
+|----------|--------------------------------------------------------------------------------|-----------|--------|
+| PAY-001  | Support multiple payment methods: Credit Card, Debit Card, UPI, Net Banking, Wallet | Must Have | ◑ enum + simulated gateway |
+| PAY-002  | Process payment upon receiving `OrderPlaceEvent` from Kafka                   | Must Have | ✅ |
+| PAY-003  | Publish `PaymentCompletedEvent` or `PaymentFailedEvent` after processing      | Must Have | ✅ |
+| PAY-004  | Full refund for cancelled orders within 7 days                                 | Must Have | ✅ |
+| PAY-005  | Partial refund for returned items                                              | Should Have | ⬜ |
+| PAY-006  | Payment transaction log with gateway reference ID, amount, status, timestamp  | Must Have | ✅ |
+| PAY-007  | Retry failed payments up to 3 times with exponential backoff                   | Must Have | ◑ consume retry+DLQ; no payment re-processing |
+| PAY-008  | Generate GST-compliant invoices for each successful payment                    | Should Have | ⬜ |
+| PAY-009  | Daily settlement reports for finance reconciliation                            | Should Have | ⬜ |
+| PAY-010  | PCI-DSS compliance: no card data stored; delegate to payment gateway           | Must Have | ✅ by design (simulated) |
 
 ---
 
@@ -208,28 +211,33 @@ A distributed, event-driven platform where:
 
 ## 9. Phased Delivery Plan
 
-### Phase 1 — Foundation (Months 1-3) ✅ In Progress
+> Status reflects verified implementation as of 2026-08-09 — see [Implementation Status](../implementation-status.md).
+
+### Phase 1 — Foundation (Months 1-3) ✅ Completed
 - [x] Order Service with Kafka event publishing
 - [x] Inventory Service with stock management
 - [x] Outbox pattern for guaranteed delivery
 - [x] Docker Compose for local development
 - [x] Commons library for shared DTOs and clients
 
-### Phase 2 — Core Commerce (Months 4-6)
-- [ ] Payment Service with Razorpay integration
-- [ ] User Service with JWT authentication
-- [ ] Order status state machine
-- [ ] Saga orchestration for order fulfillment
-- [ ] API Gateway with rate limiting
+### Phase 2 — Core Commerce (Months 4-6) ◑ Mostly complete
+- [x] Payment Service — implemented with a **simulated** gateway (PAY-002/003/004 ✅);
+      real Razorpay/Stripe integration is **future scope** (PAY-001/005/008/009 ⬜)
+- [x] User Service with JWT authentication (UM-001/002 ✅; reset, RBAC, admin ⬜)
+- [~] Order status state machine — PENDING→RESERVED→CONFIRMED/CANCELLED wired;
+      SHIPPED/DELIVERED pending (ORD-007)
+- [x] Saga orchestration for order fulfillment — saga + compensating transactions
+      (stock release on payment-fail/refund)
+- [~] API Gateway — routing + CORS done; **rate limiting pending**
 
-### Phase 3 — Operational Excellence (Months 7-9)
+### Phase 3 — Operational Excellence (Months 7-9) ⬜ Future scope
 - [ ] Distributed tracing (Zipkin/Jaeger)
 - [ ] Centralized logging (ELK Stack)
 - [ ] Kubernetes deployment manifests
 - [ ] CI/CD pipeline (GitHub Actions)
 - [ ] Load testing (Gatling) and performance tuning
 
-### Phase 4 — Growth Features (Months 10-12)
+### Phase 4 — Growth Features (Months 10-12) ⬜ Future scope
 - [ ] Product search with Elasticsearch
 - [ ] Recommendation engine
 - [ ] Multi-warehouse inventory
