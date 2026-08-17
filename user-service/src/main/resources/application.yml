@@ -27,3 +27,14 @@ spring:
 jwt:
   secret: ${JWT_SECRET:defaultSecretKeyForEcommerceAppWhichIsAtLeast32BytesLong}
   expiration-ms: 86400000 # 24 hours
+  refresh-expiration-ms: 604800000 # 7 days
+
+app:
+  mail:
+    provider: console          # console = log to stdout; swap for smtp in prod
+    from: noreply@shopease.local
+  verification:
+    token-ttl-minutes: 60      # email verification token expiry
+    frontend-verify-url: http://localhost:4200/auth/verify   # frontend route the verify link points to
+  reset:
+    token-ttl-minutes: 10      # password-reset OTP expiry
